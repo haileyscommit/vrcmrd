@@ -1,7 +1,2 @@
-# Tauri + Preact + Typescript
-
-This template should help get you started developing with Tauri, Preact and Typescript in Vite.
-
-## Recommended IDE Setup
-
-- [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+# VRChat Moderation Reference Dashboard
+Gives each moderator of a group knowledge and understanding of all users in a lobby, including what avatars they're in and stuff. It's basically a re-implementation of Scarlet, but networked so you don't have to live-stream it & each mod gets more read-only access to stuff, and hopefully generally better.
