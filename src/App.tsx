@@ -3,6 +3,9 @@ import Tabs from "./components/Tabs";
 import Menubar from "./components/Menubar";
 
 export default function App() {
+  if (import.meta.env.PROD) {
+    window.addEventListener("contextmenu", e => e.preventDefault());
+  }
   return (
     <div class="select-none h-screen w-screen flex flex-col items-start justify-start bg-gray-100 dark:bg-gray-900">
       <Menubar />
