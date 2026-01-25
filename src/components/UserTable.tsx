@@ -22,7 +22,7 @@ export default function UserTable() {
   return (  
     <div class="flex-grow w-screen overflow-x-auto overflow-y-scroll bg-gray-100 dark:bg-gray-900">
       <table class="min-w-full text-sm text-left text-gray-700 dark:text-gray-200">
-          <thead class="bg-gray-50 dark:bg-gray-800">
+        <thead class="bg-gray-50 dark:bg-gray-800">
           <tr class="text-xs text-gray-500 uppercase">
               <th class="px-2 py-2">User</th>
               <th class="px-2 py-2">Avatar</th>
@@ -30,13 +30,13 @@ export default function UserTable() {
               <th class="px-2 py-2">Acc Age</th>
               <th class="px-2 py-2">Join Time</th>
               <th class="px-2 py-2">Leave Time</th>
-              <th class="px-2 py-2">Flags</th>
+              <th class="px-2 py-2 text-right">Flags</th>
           </tr>
-          </thead>
-          <tbody>
+        </thead>
+        <tbody>
             {/* TODO: smart sort: user-specific advisories, avatar advisories, group membership advisories. Within each category, users should be sorted by most recent leave or join first */}
           {users.map((u, idx) => (
-              <tr key={u.id} class={(idx % 2 === 0 ? 'bg-white' : 'bg-gray-50') + ' dark:bg-transparent hover:bg-gray-200 dark:hover:bg-gray-800 cursor-pointer active:bg-gray-50 dark:active:bg-black/50'}>
+              <tr key={u.id} class={(idx % 2 === 0 ? 'bg-white dark:bg-transparent' : 'bg-gray-50 dark:bg-gray-800/30') + '  hover:bg-gray-200 dark:hover:bg-gray-800 cursor-pointer active:bg-gray-50 dark:active:bg-black/50'}>
               <td class="px-2 py-1 align-middle">
                   <div class="flex items-center gap-3">
                   <div class="flex flex-col">
@@ -52,22 +52,22 @@ export default function UserTable() {
               <td class="px-2 py-1 align-middle text-xs">{u.joinTime}</td>
               <td class="px-2 py-1 align-middle text-xs">{u.leaveTime}</td>
               <td class="px-2 py-1 align-middle">
-                  <div class="flex items-center gap-2">
+                  <div class="flex items-center justify-end gap-2">
                   {u.advisories && (
-                      <div class="tooltip" aria-hidden>
+                      <div class="tooltip right" aria-hidden>
                       <AlertIcon />
                       <div class="tooltip-tip">Advisories added by user</div>
                       </div>
                   )}
 
                   {u.ageVerified && (
-                      <div class="tooltip" aria-hidden>
+                      <div class="tooltip right" aria-hidden>
                       <CardAccountDetailsIcon />
                       <div class="tooltip-tip">Age verified</div>
                       </div>
                   )}
 
-                  <div class="tooltip" aria-hidden>
+                  <div class="tooltip right" aria-hidden>
                       {u.platform === 'pc' && <MonitorIcon />}
                       {u.platform === 'android' && <AndroidIcon />}
                       {u.platform === 'ios' && <AppleIcon />}

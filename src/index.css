@@ -13,6 +13,12 @@
   position: relative;
   display: inline-flex;
   align-items: center;
+  &.right {
+    align-items: flex-end;
+  }
+  &.left {
+    align-items: flex-start;
+  }
 }
 .tooltip .tooltip-tip {
   position: absolute;
@@ -29,6 +35,11 @@
   pointer-events: none;
   transition: opacity 0.12s ease, transform 0.12s ease;
   box-shadow: 0 6px 14px rgba(2,6,23,0.25);
+}
+.tooltip.right .tooltip-tip {
+  left: unset;
+  right: -50%;
+  transform: translateX(-50%) scale(0.95);
 }
 .tooltip:hover .tooltip-tip {
   opacity: 1;
