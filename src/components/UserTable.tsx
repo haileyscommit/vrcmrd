@@ -1,24 +1,43 @@
-import { h } from 'preact';
-import { users } from '../data/users';
+import { User, users } from '../data/users';
 import AlertIcon from "mdi-preact/AlertIcon";
 import CardAccountDetailsIcon from "mdi-preact/CardAccountDetailsIcon";
 import AndroidIcon from "mdi-preact/AndroidIcon";
 import AppleIcon from "mdi-preact/AppleIcon";
 import MonitorIcon from "mdi-preact/MonitorIcon";
-
-const Avatar = ({ name }: { name: string }) => {
-  const initials = name.split(' ').map(s => s[0]).slice(0,2).join('').toUpperCase();
-  // simple deterministic color by char code
-  const hue = (name.charCodeAt(0) * 37) % 360;
-  const style = { background: `hsl(${hue} 70% 65%)` } as any;
-  return (
-    <div class="avatar-sm text-white" style={style} title={name} aria-hidden>
-      {initials}
-    </div>
-  );
-};
+import { useEffect, useState } from 'preact/hooks';
+import { listen } from '@tauri-apps/api/event';
+import { menu } from '@tauri-apps/api';
+import { invoke } from '@tauri-apps/api/core';
 
 export default function UserTable() {
+  const [userList, setUserList] = useState<User[]>(users); // placeholder for future dynamic data
+  useEffect(() => {
+    const initialUsers = async () => {
+      invoke<User[]>('get_users').then(fetchedUsers => {
+        setUserList(fetchedUsers);
+      });
+    };
+    initialUsers();
+    const joinUnlisten = listen('vrcmrd:join', (event) => {
+      // TODO: make it match the User struct on the Rust side
+      const detail = event.payload as User;
+      setUserList(prev => [...prev, detail]);
+    });
+    const leaveUnlisten = listen('vrcmrd:leave', (event) => {
+      const detail = event.payload as User;
+      setUserList(prev => prev.map(u => {
+        if (u.id === detail.id) {
+          return { ...u, leaveTime: Date.now().toString() };
+        }
+        return u;
+      }));
+    });
+
+    return () => {
+      joinUnlisten.then(unlisten => unlisten());
+      leaveUnlisten.then(unlisten => unlisten());
+    };
+  }, []);
   return (  
     <div class="flex-grow w-screen overflow-x-auto overflow-y-scroll bg-gray-100 dark:bg-gray-900">
       <table class="min-w-full text-sm text-left text-gray-700 dark:text-gray-200">
@@ -35,8 +54,32 @@ export default function UserTable() {
         </thead>
         <tbody>
             {/* TODO: smart sort: user-specific advisories, avatar advisories, group membership advisories. Within each category, users should be sorted by most recent leave or join first */}
-          {users.map((u, idx) => (
-              <tr key={u.id} class={(idx % 2 === 0 ? 'bg-white dark:bg-transparent' : 'bg-gray-50 dark:bg-gray-800/30') + '  hover:bg-gray-200 dark:hover:bg-gray-800 cursor-pointer active:bg-gray-50 dark:active:bg-black/50'}>
+          {userList.map((u, idx) => (
+            <tr
+              key={u.id}
+              class={(idx % 2 === 0 ? 'bg-white dark:bg-transparent' : 'bg-gray-50 dark:bg-gray-800/30') + '  hover:bg-gray-200 dark:hover:bg-gray-800 cursor-pointer active:bg-gray-50 dark:active:bg-black/50'}
+              onContextMenu={async (e) => {
+                e.preventDefault();
+                const cm = await menu.Menu.new({id: `ucm-${u.id}`, items: [
+                  await menu.MenuItem.new({
+                    text: 'Log warning'
+                  }),
+                  await menu.MenuItem.new({
+                    text: 'Add shared note'
+                  }),
+                  await menu.MenuItem.new({
+                    text: 'Create moderation ticket'
+                  }),
+                  await menu.MenuItem.new({
+                    text: 'View profile in browser'
+                  }),
+                  await menu.MenuItem.new({
+                    text: 'Copy user ID'
+                  }),
+                ]});
+                cm.popup();
+              }}
+              >
               <td class="px-2 py-1 align-middle">
                   <div class="flex items-center gap-3">
                   <div class="flex flex-col">

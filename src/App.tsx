@@ -1,6 +1,7 @@
 import UserTable from "./components/UserTable";
 import Tabs from "./components/Tabs";
 import Menubar from "./components/Menubar";
+import { BlockingModsTable } from "./components/BlocksTable";
 
 export default function App() {
   if (import.meta.env.PROD) {
@@ -31,24 +32,7 @@ export default function App() {
               </div>
             ),
           },
-          {
-            id: "tab-2",
-            label: "Tab 2",
-            content: (
-              <div className="text-sm text-gray-600 dark:text-gray-300">
-                This is a simple unstyled placeholder for Tab 2.
-              </div>
-            ),
-          },
-          {
-            id: "tab-3",
-            label: "Tab 3",
-            content: (
-              <div className="text-sm text-gray-600 dark:text-gray-300">
-                This is a simple unstyled placeholder for Tab 3.
-              </div>
-            ),
-          },
+          { id: "blocking-mods", label: "Blocking Mods", content: <BlockingModsTable /> },
         ]}
       />
     </div>

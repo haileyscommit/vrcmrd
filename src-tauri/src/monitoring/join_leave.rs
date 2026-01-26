@@ -1,0 +1,73 @@
+use std::sync::Mutex;
+
+use crate::memory::users::Users;
+use tauri::{AppHandle, Emitter, Manager};
+
+use crate::types::VrcMrdUser;
+use crate::monitoring::VrcLogEntry;
+
+/// Handle a join/leave log entry, emitting Tauri events as appropriate.
+/// If the line was a join/leave event, emits the event and returns Ok(true).
+/// If not, returns Ok(false). If an error occurs during emitting, returns Err.
+pub fn handle_join_leave(app: AppHandle, line: &VrcLogEntry) -> Result<bool, tauri::Error> {
+    let message = &line.message;
+    if let Some(rest) = message.strip_prefix("[Behaviour] OnPlayerJoined ") {
+        // rest is like "Player Name (usr_xxx)"
+        if let (Some(open), Some(close)) = (rest.rfind('('), rest.rfind(')')) {
+            if open < close {
+                let player_name = rest[..open].trim().to_string();
+                let player_id = rest[open + 1..close].to_string();
+                //println!("Player joined: {} ({})", player_name, player_id);
+                let user = VrcMrdUser {
+                    id: player_id,
+                    username: player_name,
+                    avatar_name: String::new(),
+                    perf_rank: "VeryPoor".to_string(),
+                    account_age: "?".to_string(),
+                    join_time: line.timestamp.clone(), // TODO: store it as a unix timestamp and format on frontend
+                    leave_time: String::new(), // same as above
+                    advisories: false, // this should contain the actual advisories
+                    age_verified: false,
+                    platform: "pc".to_string(),
+                };
+                let state = app.state::<Mutex<Users>>();
+                let mut state = state.lock().unwrap();
+                state.inner.retain(|e| e.id != user.id);
+                state.inner.push(user.clone());
+                return app.emit("vrcmrd:join", user).and(Ok(true));
+            }
+        }
+    } else if let Some(rest) = message.strip_prefix("[Behaviour] OnPlayerLeft ") {
+        // rest is like "Player Name (usr_xxx)"
+        if let (Some(open), Some(close)) = (rest.rfind('('), rest.rfind(')')) {
+            if open < close {
+                let player_name = rest[..open].trim().to_string();
+                let player_id = rest[open + 1..close].to_string();
+                //println!("Player left: {} ({})", player_name, player_id);
+                let user = VrcMrdUser {
+                    id: player_id,
+                    username: player_name,
+                    avatar_name: String::new(),
+                    perf_rank: "VeryPoor".to_string(),
+                    account_age: "?".to_string(),
+                    join_time: String::new(), // TODO: store it as a unix timestamp and format on frontend
+                    leave_time: line.timestamp.clone(),
+                    advisories: false, // this should contain the actual advisories
+                    age_verified: false,
+                    platform: "pc".to_string(),
+                };
+                let state = app.state::<Mutex<Users>>();
+                let mut state = state.lock().unwrap();
+                // Update the user's leave_time if they exist
+                if let Some(existing_user) = state.inner.iter_mut().find(|u| u.id == user.id) {
+                    existing_user.leave_time = user.leave_time.clone();
+                } else {
+                    // If user not found, add them (this shouldn't normally happen)
+                    state.inner.push(user.clone());
+                }
+                return app.emit("vrcmrd:leave", user).and(Ok(true));
+            }
+        }
+    }
+    Ok(false)
+}
