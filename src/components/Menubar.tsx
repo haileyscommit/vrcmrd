@@ -1,7 +1,14 @@
+import { emit } from "@tauri-apps/api/event";
+
 export default function Menubar() {
   return <div id="menubar" class="h-7 px-2 gap-2 flex flex-row w-full bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-    <MenubarButton label="Refresh caches" onClick={() => { /* refresh caches logic */ }} />
-    <MenubarButton label="Manage users" onClick={() => { /* manage users logic */ }} />
+    <MenubarButton label="Refresh" onClick={() => {
+      emit('vrcmrd:cache_refresh', {});
+      document.dispatchEvent(new CustomEvent('vrcmrd:soft-refresh'));
+      /* refresh caches logic */
+    }} />
+    <MenubarButton label="Manage access" onClick={() => { /* manage users logic */ }} />
+    <MenubarButton label="Manage watchlists" onClick={() => { /* manage watched groups/users logic */ }} />
     <MenubarButton label="Settings" onClick={() => { /* open settings window */ }} />
   </div>;
 }

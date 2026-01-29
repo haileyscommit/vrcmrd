@@ -40,7 +40,7 @@ export default function Tabs({ tabs }: { tabs: TabItem[] }) {
     <div
       role="tablist"
       aria-label="Primary"
-      className="flex space-x-1 pt-1 px-2 overflow-x-auto"
+      className="flex flex-row space-x-1 pt-1 px-2 overflow-x-auto h-10"
     >
       {tabs.map((t, i) => (
         <button

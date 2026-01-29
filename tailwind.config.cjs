@@ -1,5 +1,5 @@
 module.exports = {
-  content: ["./index.html", "./src/**/*.{ts,tsx,js,jsx}"],
+  content: ["./entrypoints/**/*.html", "./src/**/*.{ts,tsx,js,jsx}"],
   // Safelist for classes that may be built dynamically or appear in expressions
   // safelist: [
   //   'bg-white',

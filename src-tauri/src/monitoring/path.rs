@@ -46,15 +46,21 @@ pub fn get_monitor_path(path: &mut PathBuf) -> Option<bool> {
         }
 
         if let Some(new_path) = latest_path {
-            let current_name = path.file_name().and_then(|s| s.to_str()).map(|s| s.to_string());
-            let latest_name = new_path.file_name().and_then(|s| s.to_str()).map(|s| s.to_string());
+            let current_name = path
+                .file_name()
+                .and_then(|s| s.to_str())
+                .map(|s| s.to_string());
+            let latest_name = new_path
+                .file_name()
+                .and_then(|s| s.to_str())
+                .map(|s| s.to_string());
             if current_name.as_deref() != latest_name.as_deref() {
                 eprintln!("Switching to latest log file: {:?}", new_path);
                 *path = new_path;
                 return Some(true);
             }
         }
-        
+
         // let mut latest_name: Option<String> = None;
         // let mut latest_path: Option<PathBuf> = None;
 

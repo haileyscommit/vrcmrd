@@ -16,20 +16,22 @@
   "dependencies": {
     "@tailwindcss/postcss": "^4.1.18",
     "@tailwindcss/vite": "^4.1.18",
-    "@tauri-apps/api": "^2",
-    "@tauri-apps/plugin-opener": "^2",
+    "@tauri-apps/api": "^2.9.1",
+    "@tauri-apps/plugin-dialog": "^2.6.0",
+    "@tauri-apps/plugin-opener": "^2.5.3",
     "mdi-preact": "^9.4.0",
-    "preact": "^10.25.1"
+    "preact": "^10.28.2"
   },
   "devDependencies": {
-    "@preact/preset-vite": "^2.9.3",
+    "@preact/preset-vite": "^2.10.3",
     "@tailwindcss/cli": "^4.1.18",
-    "@tauri-apps/cli": "^2",
+    "@tauri-apps/cli": "^2.9.6",
+    "@types/node": "^25.1.0",
     "autoprefixer": "^10.4.23",
     "postcss": "^8.5.6",
     "postcss-cli": "^11.0.1",
     "tailwindcss": "^4.1.18",
-    "typescript": "~5.6.2",
-    "vite": "^6.0.3"
+    "typescript": "~5.6.3",
+    "vite": "^6.4.1"
   }
 }

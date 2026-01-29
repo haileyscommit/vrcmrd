@@ -3,8 +3,8 @@ use std::sync::Mutex;
 use crate::memory::users::Users;
 use tauri::{AppHandle, Emitter, Manager};
 
-use crate::types::VrcMrdUser;
 use crate::monitoring::VrcLogEntry;
+use crate::types::VrcMrdUser;
 
 /// Handle a join/leave log entry, emitting Tauri events as appropriate.
 /// If the line was a join/leave event, emits the event and returns Ok(true).
@@ -24,11 +24,11 @@ pub fn handle_join_leave(app: AppHandle, line: &VrcLogEntry) -> Result<bool, tau
                     avatar_name: String::new(),
                     perf_rank: "VeryPoor".to_string(),
                     account_age: "?".to_string(),
-                    join_time: line.timestamp.clone(), // TODO: store it as a unix timestamp and format on frontend
-                    leave_time: String::new(), // same as above
+                    join_time: parse_timestamp(&line.timestamp),
+                    leave_time: None,
                     advisories: false, // this should contain the actual advisories
                     age_verified: false,
-                    platform: "pc".to_string(),
+                    platform: None,
                 };
                 let state = app.state::<Mutex<Users>>();
                 let mut state = state.lock().unwrap();
@@ -50,11 +50,11 @@ pub fn handle_join_leave(app: AppHandle, line: &VrcLogEntry) -> Result<bool, tau
                     avatar_name: String::new(),
                     perf_rank: "VeryPoor".to_string(),
                     account_age: "?".to_string(),
-                    join_time: String::new(), // TODO: store it as a unix timestamp and format on frontend
-                    leave_time: line.timestamp.clone(),
+                    join_time: 0, // TODO: store it as a unix timestamp and format on frontend
+                    leave_time: Some(parse_timestamp(&line.timestamp)),
                     advisories: false, // this should contain the actual advisories
                     age_verified: false,
-                    platform: "pc".to_string(),
+                    platform: None,
                 };
                 let state = app.state::<Mutex<Users>>();
                 let mut state = state.lock().unwrap();
@@ -70,4 +70,15 @@ pub fn handle_join_leave(app: AppHandle, line: &VrcLogEntry) -> Result<bool, tau
         }
     }
     Ok(false)
+}
+
+/// Parse a log timestamp string (2026.01.27 16:24:32) from the log into a Unix timestamp representation.
+pub fn parse_timestamp(_timestamp_str: &str) -> i64 {
+    let _dt = chrono::NaiveDateTime::parse_from_str(_timestamp_str, "%Y.%m.%d %H:%M:%S");
+    if let Some(dt) = _dt.ok() {
+        let unix_timestamp = dt.and_local_timezone(chrono::Local).unwrap().timestamp() as i64;
+        return unix_timestamp;
+    } else {
+        return 0;
+    }
 }

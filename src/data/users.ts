@@ -7,13 +7,14 @@ export type User = {
   avatarName: string;
   perfRank: PerformanceRank;
   accountAge: string; // e.g. "3y"
-  joinTime: string; // e.g. "13:12"
-  leaveTime: string; // e.g. "13:24"
+  joinTime: number; // e.g. "13:12"
+  leaveTime: number | null; // e.g. "13:24"
   advisories: boolean;
   ageVerified: boolean;
-  platform: Platform;
+  platform: Platform | null;
 };
 
+/** @deprecated Get actual users instead */
 export const users: User[] = [
   {
     id: 'u1',
@@ -21,8 +22,8 @@ export const users: User[] = [
     avatarName: 'Neon Sparrow',
     perfRank: 'Excellent',
     accountAge: '4y',
-    joinTime: '12:03',
-    leaveTime: '12:37',
+    joinTime: 7203,
+    leaveTime: 7357,
     advisories: true,
     ageVerified: true,
     platform: 'pc'
@@ -33,8 +34,8 @@ export const users: User[] = [
     avatarName: 'Pixel Panda',
     perfRank: 'Good',
     accountAge: '1y',
-    joinTime: '12:09',
-    leaveTime: '12:20',
+    joinTime: 7254,
+    leaveTime: 7320,
     advisories: false,
     ageVerified: true,
     platform: 'android'
@@ -45,8 +46,8 @@ export const users: User[] = [
     avatarName: 'Skyline',
     perfRank: 'Medium',
     accountAge: '6mo',
-    joinTime: '11:50',
-    leaveTime: '12:05',
+    joinTime: 7100,
+    leaveTime: 7230,
     advisories: false,
     ageVerified: false,
     platform: 'ios'
@@ -57,8 +58,8 @@ export const users: User[] = [
     avatarName: 'Glitch',
     perfRank: 'VeryPoor',
     accountAge: '2y',
-    joinTime: '12:25',
-    leaveTime: '12:55',
+    joinTime: 7475,
+    leaveTime: 7555,
     advisories: true,
     ageVerified: false,
     platform: 'pc'
@@ -69,8 +70,8 @@ export const users: User[] = [
     avatarName: 'Luma',
     perfRank: 'Medium',
     accountAge: '9mo',
-    joinTime: '12:40',
-    leaveTime: '13:02',
+    joinTime: 7600,
+    leaveTime: 7822,
     advisories: false,
     ageVerified: true,
     platform: 'ios'

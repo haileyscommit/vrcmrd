@@ -1,14 +1,26 @@
+pub mod instance;
 mod join_leave;
-mod instance;
 mod path;
 
 use std::{
-    env, fs::File, io::{Read, Seek}, path::PathBuf, sync::{
-        Arc, atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver}
-    }, thread::{self, JoinHandle}, time::Duration, vec
+    env,
+    fs::File,
+    io::{Read, Seek},
+    path::PathBuf,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        mpsc::{self, Receiver},
+        Arc,
+    },
+    thread::{self, JoinHandle},
+    time::Duration,
+    vec,
 };
 
-use tauri::{EventLoopMessage, Manager, Runtime, Wry, plugin::{Builder, TauriPlugin}};
+use tauri::{
+    plugin::{Builder, TauriPlugin},
+    EventLoopMessage, Manager, Runtime, Wry,
+};
 
 use crate::monitoring::path::get_monitor_path;
 
@@ -39,15 +51,26 @@ fn is_timestamped_line(b: &[u8]) -> bool {
         false
     } else {
         // Quick checks for separators and digit presence
-        let sep_ok = b[4] == b'.' && b[7] == b'.' && b[10] == b' '
-            && b[13] == b':' && b[16] == b':' && b[19] == b' ';
-        let digits_ok = b[0].is_ascii_digit() && b[1].is_ascii_digit()
-            && b[2].is_ascii_digit() && b[3].is_ascii_digit()
-            && b[5].is_ascii_digit() && b[6].is_ascii_digit()
-            && b[8].is_ascii_digit() && b[9].is_ascii_digit()
-            && b[11].is_ascii_digit() && b[12].is_ascii_digit()
-            && b[14].is_ascii_digit() && b[15].is_ascii_digit()
-            && b[17].is_ascii_digit() && b[18].is_ascii_digit();
+        let sep_ok = b[4] == b'.'
+            && b[7] == b'.'
+            && b[10] == b' '
+            && b[13] == b':'
+            && b[16] == b':'
+            && b[19] == b' ';
+        let digits_ok = b[0].is_ascii_digit()
+            && b[1].is_ascii_digit()
+            && b[2].is_ascii_digit()
+            && b[3].is_ascii_digit()
+            && b[5].is_ascii_digit()
+            && b[6].is_ascii_digit()
+            && b[8].is_ascii_digit()
+            && b[9].is_ascii_digit()
+            && b[11].is_ascii_digit()
+            && b[12].is_ascii_digit()
+            && b[14].is_ascii_digit()
+            && b[15].is_ascii_digit()
+            && b[17].is_ascii_digit()
+            && b[18].is_ascii_digit();
         if !sep_ok || !digits_ok {
             false
         } else {
@@ -79,7 +102,10 @@ fn is_timestamped_line(b: &[u8]) -> bool {
 
 /// Start monitoring `path` on a background thread. Returns a receiver of events and a handle
 /// to stop the monitor. The monitor polls the file every `interval`.
-fn start_logfile_monitor(path: impl Into<PathBuf>, interval: Duration) -> (Receiver<VrcLogEntry>, MonitorHandle) {
+fn start_logfile_monitor(
+    path: impl Into<PathBuf>,
+    interval: Duration,
+) -> (Receiver<VrcLogEntry>, MonitorHandle) {
     // this is `mut` so that it can be updated if a new log file appears
     #[allow(unused_mut)]
     let mut path = path.into();
@@ -151,9 +177,18 @@ fn start_logfile_monitor(path: impl Into<PathBuf>, interval: Duration) -> (Recei
                     if line.len() < 34 {
                         continue;
                     }
-                    let timestamp_str = String::from_utf8_lossy(&line[..19]).to_string().trim().to_string();
-                    let level_str = String::from_utf8_lossy(&line[20..30]).to_string().trim().to_string();
-                    let message_str = String::from_utf8_lossy(&line[34..]).to_string().trim().to_string();
+                    let timestamp_str = String::from_utf8_lossy(&line[..19])
+                        .to_string()
+                        .trim()
+                        .to_string();
+                    let level_str = String::from_utf8_lossy(&line[20..30])
+                        .to_string()
+                        .trim()
+                        .to_string();
+                    let message_str = String::from_utf8_lossy(&line[34..])
+                        .to_string()
+                        .trim()
+                        .to_string();
                     //eprintln!("Processing line: {:?}, {:?}, {:?}", timestamp_str, level_str, message_str);
                     let log_entry = VrcLogEntry {
                         timestamp: timestamp_str,
@@ -164,11 +199,10 @@ fn start_logfile_monitor(path: impl Into<PathBuf>, interval: Duration) -> (Recei
                         eprintln!("Receiver has been dropped, stopping monitor.");
                         return;
                     }
-                    
                 }
                 //tx.send(vec![...]).ok();
             }
-            
+
             // Get the new length after reading
             last_len = file.metadata().map(|m| m.len()).unwrap_or(last_len);
 
@@ -190,7 +224,8 @@ fn start_logfile_monitor(path: impl Into<PathBuf>, interval: Duration) -> (Recei
 
 pub fn start_monitoring_logfiles(app: tauri::AppHandle) {
     // Example usage
-    let file_to_watch = env::var("APPDATA").unwrap_or_default() + "\\..\\LocalLow\\VRChat\\VRChat\\";
+    let file_to_watch =
+        env::var("APPDATA").unwrap_or_default() + "\\..\\LocalLow\\VRChat\\VRChat\\";
     let (rx, handle) = start_logfile_monitor(file_to_watch, Duration::from_millis(200));
 
     // Spawn a thread to print events (main thread could also handle them).
@@ -200,12 +235,12 @@ pub fn start_monitoring_logfiles(app: tauri::AppHandle) {
             //println!("{:?}", evt);
             match instance::handle_joined_instance(app.clone(), &evt) {
                 Ok(true) => continue, // handled
-                Ok(false) => {},
+                Ok(false) => {}
                 Err(e) => eprintln!("Error handling joined instance: {:?}", e),
             }
             match join_leave::handle_join_leave(app.clone(), &evt) {
                 Ok(true) => continue, // handled
-                Ok(false) => {},
+                Ok(false) => {}
                 Err(e) => eprintln!("Error handling join/leave: {:?}", e),
             }
         }

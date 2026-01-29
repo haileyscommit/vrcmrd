@@ -1,9 +1,23 @@
-import { defineConfig } from "vite";
+/// <reference types="node" />
+import { defineConfig, UserConfigFn, UserConfigFnPromise } from "vite";
 import preact from "@preact/preset-vite";
 import tailwindcss from '@tailwindcss/vite';
+import { fileURLToPath } from "url";
+import path from "path";
+import fs from "fs";
 
-// @ts-expect-error process is a nodejs global
+const root = path.dirname(fileURLToPath(import.meta.url));
+
 const host = process.env.TAURI_DEV_HOST;
+
+const inputs = Object.fromEntries(
+  fs.readdirSync("src/entrypoints")
+    .filter(f => f.endsWith(".html"))
+    .map(f => [
+      f.replace(/\.html$/, "").replace(/src\/entrypoints\//, ""),
+      path.join("src/entrypoints", f),
+    ])
+);
 
 // https://vitejs.dev/config/
 export default defineConfig(async () => ({
@@ -11,6 +25,12 @@ export default defineConfig(async () => ({
     preact(),
     tailwindcss(),
   ],
+
+  build: {
+    rollupOptions: {
+      input: inputs,
+    },
+  },
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //
@@ -33,4 +53,4 @@ export default defineConfig(async () => ({
       ignored: ["**/src-tauri/**"],
     },
   },
-}));
+}) as unknown);
