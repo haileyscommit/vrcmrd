@@ -4,6 +4,7 @@ use reqwest::cookie::CookieStore;
 use tauri::{async_runtime::Mutex, AppHandle, Emitter, Listener, Manager, Wry};
 use vrchatapi::{apis::configuration::Configuration, models::RegisterUserAccount200Response};
 
+#[macro_use]
 mod request;
 
 #[derive(Debug, Clone)]
@@ -83,14 +84,14 @@ pub async fn initialize_api(app: AppHandle) -> Result<(), ()> {
         .cookie_provider(std::sync::Arc::clone(&cookie_jar))
         .build()
         .unwrap();
-    let api_key_entry = keyring_core::Entry::new("VRChatAuthCookie", std::env::var("VRC_USERNAME").unwrap_or_default().as_str());
+    let api_key_entry = keyring_core::Entry::new("VRChatCookies", std::env::var("VRC_USERNAME").unwrap_or_default().as_str());
     if let Err(e) = &api_key_entry {
         eprintln!("No stored auth cookie found in keyring: {:?}", e);
         return Err(());
     }
     if let Ok(stored_cookie) = api_key_entry.unwrap().get_password() {
         let cookie = stored_cookie;
-        let url = reqwest::Url::parse(format!("{}/{}", config.base_path, "auth/user").as_str()).unwrap();
+        let url = reqwest::Url::parse(&config.base_path).unwrap();
         cookie_jar.add_cookie_str(&cookie, &url);
         println!("Using stored auth cookie for VRChat API.");
     } else {
@@ -163,7 +164,7 @@ pub async fn initialize_api(app: AppHandle) -> Result<(), ()> {
                             let kv = cookie.splitn(2, '=').collect::<Vec<&str>>();
                             if kv[0].trim() == "auth" {
                                 println!("Auth cookie received!");
-                                keyring_core::Entry::new("VRChatAuthCookie", user_info.username.as_deref().unwrap_or(&user_info.display_name))
+                                keyring_core::Entry::new("VRChatCookies", user_info.username.as_deref().unwrap_or(&user_info.display_name))
                                     .and_then(|entry| entry.set_password(cookie))
                                     .unwrap_or_else(|e| eprintln!("Failed to store auth cookie in keyring: {:?}", e));
                             }

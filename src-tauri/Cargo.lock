@@ -4763,6 +4763,7 @@ dependencies = [
  "tauri-plugin-dialog",
  "tauri-plugin-opener",
  "tauri-plugin-prevent-default",
+ "tokio",
  "vrchatapi",
  "windows-native-keyring-store",
 ]
