@@ -3,6 +3,7 @@ use std::{ops::Deref, sync::Mutex};
 use tauri::{Emitter, Manager, Runtime};
 
 use crate::types::VrcMrdUser;
+pub mod avatar;
 
 #[derive(Default)]
 pub struct Users {

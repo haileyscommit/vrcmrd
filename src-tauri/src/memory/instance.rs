@@ -15,18 +15,12 @@ pub type InstanceStateMutex = Mutex<InstanceState>;
 
 pub fn instance_memory_plugin() -> tauri::plugin::TauriPlugin<Wry> {
     let mut listener: Option<u32> = None;
-    let mut listener2: Option<u32> = None;
     tauri::plugin::Builder::new("instance_memory")
         .setup(move |app, _api| {
             let instance_state = InstanceStateMutex::new(InstanceState::default());
             app.manage::<InstanceStateMutex>(instance_state);
-            listener = Some(app.listen("vrcmrd:instance", |event| {
-                let instance_id = event.payload().to_string();
-                //vrchatapi::apis::instances_api::get_instance_by_short_name(&Configuration::default(), &instance_id).await;
-                // TODO: look up, cache, and emit instance info here
-            }));
             let app_clone = app.app_handle().clone();
-            listener2 = Some(app.listen("vrcmrd:cache_refresh", move |_| {
+            listener = Some(app.listen("vrcmrd:cache_refresh", move |_| {
                 let state = app_clone.state::<InstanceStateMutex>();
                 let state = state.lock().unwrap();
                 if state.id_info.is_none() {
@@ -38,9 +32,6 @@ pub fn instance_memory_plugin() -> tauri::plugin::TauriPlugin<Wry> {
         })
         .on_drop(move |app| {
             if let Some(listener_id) = listener {
-                app.unlisten(listener_id);
-            }
-            if let Some(listener_id) = listener2 {
                 app.unlisten(listener_id);
             }
         })

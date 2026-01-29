@@ -25,6 +25,7 @@ pub fn run() {
         .plugin(monitoring::monitoring_plugin())
         .plugin(memory::users::user_memory_plugin())
         .plugin(memory::instance::instance_memory_plugin())
+        .plugin(memory::users::avatar::avatar_memory_plugin())
         .plugin(api::vrchat_api_plugin())
         .invoke_handler(tauri::generate_handler![
             greet,

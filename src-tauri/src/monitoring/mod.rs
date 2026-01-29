@@ -1,4 +1,5 @@
 pub mod instance;
+mod avatars;
 mod join_leave;
 mod path;
 
@@ -116,7 +117,7 @@ fn start_logfile_monitor(
     let join = thread::spawn(move || {
         let mut last_len: u64 = 0;
 
-        while !thread_stop.load(Ordering::Relaxed) {
+        while !thread_stop.load(Ordering::SeqCst) {
             // Check for new rotated log files in the same directory and switch to the newest.
             // Make sure we operate on the directory: if `path` is a file, use its parent directory.
             if let Some(success) = get_monitor_path(&mut path) {
@@ -237,6 +238,11 @@ pub fn start_monitoring_logfiles(app: tauri::AppHandle) {
                 Ok(true) => continue, // handled
                 Ok(false) => {}
                 Err(e) => eprintln!("Error handling joined instance: {:?}", e),
+            }
+            match avatars::handle_switched_avatar(app.clone(), &evt) {
+                Ok(true) => continue, // handled
+                Ok(false) => {}
+                Err(e) => eprintln!("Error handling switched avatar: {:?}", e),
             }
             match join_leave::handle_join_leave(app.clone(), &evt) {
                 Ok(true) => continue, // handled

@@ -30,6 +30,7 @@ export default function UserTable() {
     );
   }
   useEffect(() => {
+    var currentInstanceId: string | null = null;
     // This effect pre-populates the page and handles events from the backend that update the user list.
     const initialUsers = async () => {
       invoke<User[]>('get_users').then(fetchedUsers => {
@@ -48,8 +49,14 @@ export default function UserTable() {
       }
       setUserList(prev => [...prev, detail]);
     });
-    const instanceUnlisten = listen('vrcmrd:instance', (_) => {
+    const instanceUnlisten = listen('vrcmrd:instance', (event) => {
       setUserList([]);
+      currentInstanceId = event.payload as string;
+      setTimeout(() => {
+        if (currentInstanceId === event.payload as string) {
+          softRefreshList();
+        }
+      }, 2000);
     });
     const leaveUnlisten = listen('vrcmrd:leave', (event) => {
       const detail = event.payload as User;
@@ -61,31 +68,34 @@ export default function UserTable() {
       }
       setUserList(prev => prev.map(u => {
         if (u.id === detail.id) {
-          return { ...u, leaveTime: detail.leaveTime ?? Date.now() / 1000 }; // assuming leaveTime is a unix timestamp in seconds
+          return { ...u, leaveTime: detail.leaveTime ?? (Date.now() / 1000) }; // assuming leaveTime is a unix timestamp in seconds
         }
         return u;
       }));
     });
-    // const updateUnlisten = listen('vrcmrd:update-user', (event) => {
-    //   const detail = event.payload as User;
-    //   if (!userList.find(u => u.id === detail.id)) {
-    //     setUserList(prev => [...prev, detail]);
-    //     return;
-    //   }
-    //   setUserList(prev => prev.map(u => u.id === detail.id ? detail : u));
-    // });
+    const updateUnlisten = listen('vrcmrd:update-user', (event) => {
+      const detail = event.payload as User;
+      if (!userList.find(u => u.id === detail.id)) {
+        //setUserList(prev => [...prev, detail]);
+        return;
+      }
+      setUserList(prev => prev.map(u => u.id === detail.id ? detail : u));
+    });
     const softRefreshList = () => {
       invoke<User[]>('get_users').then(fetchedUsers => {
         setUserList(fetchedUsers);
       });
     };
     document.addEventListener('vrcmrd:soft-refresh', softRefreshList);
+    const refreshListInterval = setInterval(softRefreshList, 15 * 1000); // every 15 seconds
 
     return () => {
       joinUnlisten.then(unlisten => unlisten());
       leaveUnlisten.then(unlisten => unlisten());
+      updateUnlisten.then(unlisten => unlisten());
       instanceUnlisten.then(unlisten => unlisten());
       document.removeEventListener('vrcmrd:soft-refresh', softRefreshList);
+      clearInterval(refreshListInterval);
     };
   }, []);
   return (

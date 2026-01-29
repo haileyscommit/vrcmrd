@@ -18,11 +18,23 @@ pub fn handle_join_leave(app: AppHandle, line: &VrcLogEntry) -> Result<bool, tau
                 let player_name = rest[..open].trim().to_string();
                 let player_id = rest[open + 1..close].to_string();
                 //println!("Player joined: {} ({})", player_name, player_id);
+                let avatar_name: Option<String> = {
+                    let avatars_state = app.state::<crate::memory::users::avatar::AvatarsStateMutex>();
+                    let mut avatars_state = avatars_state.lock().unwrap();
+                    // Check if there's a pending avatar name for this user
+                    if let Some(index) = avatars_state.pendingAvatarNames.iter().position(|(username, _)| username == &player_name) {
+                        let (_, avatar_name) = avatars_state.pendingAvatarNames.remove(index);
+                        println!("Found pending avatar name '{}' for joining user '{}'", avatar_name, player_name);
+                        Some(avatar_name)
+                    } else {
+                        None
+                    }
+                };
                 let user = VrcMrdUser {
                     id: player_id,
                     username: player_name,
-                    avatar_name: String::new(),
-                    perf_rank: "VeryPoor".to_string(),
+                    avatar_name: avatar_name.unwrap_or_default(),
+                    perf_rank: "VeryPoor".to_string(), // TODO: determine actual perf rank
                     account_age: "?".to_string(),
                     join_time: parse_timestamp(&line.timestamp),
                     leave_time: None,
