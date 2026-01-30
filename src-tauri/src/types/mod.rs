@@ -8,7 +8,7 @@ pub struct VrcMrdUser {
     pub username: String,
     pub avatar_name: String,
     pub perf_rank: String,
-    pub account_age: String,     // e.g. "3y"
+    pub account_created: Option<i64>,     // e.g. "3y"
     pub join_time: i64,          // e.g. "13:12"
     pub leave_time: Option<i64>, // e.g. "13:24"
     pub advisories: bool,

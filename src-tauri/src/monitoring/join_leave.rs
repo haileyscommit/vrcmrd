@@ -1,5 +1,6 @@
 use std::sync::Mutex;
 
+use crate::api::user::thread_query_user_info;
 use crate::memory::users::Users;
 use tauri::{AppHandle, Emitter, Manager};
 
@@ -35,7 +36,7 @@ pub fn handle_join_leave(app: AppHandle, line: &VrcLogEntry) -> Result<bool, tau
                     username: player_name,
                     avatar_name: avatar_name.unwrap_or_default(),
                     perf_rank: "VeryPoor".to_string(), // TODO: determine actual perf rank
-                    account_age: "?".to_string(),
+                    account_created: None,
                     join_time: parse_timestamp(&line.timestamp),
                     leave_time: None,
                     advisories: false, // this should contain the actual advisories
@@ -46,6 +47,15 @@ pub fn handle_join_leave(app: AppHandle, line: &VrcLogEntry) -> Result<bool, tau
                 let mut state = state.lock().unwrap();
                 state.inner.retain(|e| e.id != user.id);
                 state.inner.push(user.clone());
+                // TODO: figure out when the instance is "settled" and up to date, and only do this then.
+                // When the instance is "settled", the instance information contains the full user list.
+                if let Some(instance_state) = app.try_state::<crate::memory::instance::InstanceStateMutex>() {
+                    let instance_state = instance_state.lock().unwrap();
+                    if instance_state.settled {
+                        drop(instance_state); // Release the lock early
+                        thread_query_user_info(app.clone(), &user.id);
+                    }
+                }
                 return app.emit("vrcmrd:join", user).and(Ok(true));
             }
         }
@@ -61,7 +71,7 @@ pub fn handle_join_leave(app: AppHandle, line: &VrcLogEntry) -> Result<bool, tau
                     username: player_name,
                     avatar_name: String::new(),
                     perf_rank: "VeryPoor".to_string(),
-                    account_age: "?".to_string(),
+                    account_created: None,
                     join_time: 0, // TODO: store it as a unix timestamp and format on frontend
                     leave_time: Some(parse_timestamp(&line.timestamp)),
                     advisories: false, // this should contain the actual advisories

@@ -49,14 +49,8 @@ export default function UserTable() {
       }
       setUserList(prev => [...prev, detail]);
     });
-    const instanceUnlisten = listen('vrcmrd:instance', (event) => {
+    const instanceUnlisten = listen('vrcmrd:instance', (_) => {
       setUserList([]);
-      currentInstanceId = event.payload as string;
-      setTimeout(() => {
-        if (currentInstanceId === event.payload as string) {
-          softRefreshList();
-        }
-      }, 2000);
     });
     const leaveUnlisten = listen('vrcmrd:leave', (event) => {
       const detail = event.payload as User;
@@ -80,6 +74,9 @@ export default function UserTable() {
         return;
       }
       setUserList(prev => prev.map(u => u.id === detail.id ? detail : u));
+    });
+    const updateAllUnlisten = listen('vrcmrd:users-updated', (_) => {
+      softRefreshList();
     });
     const softRefreshList = () => {
       invoke<User[]>('get_users').then(fetchedUsers => {
@@ -160,7 +157,7 @@ export default function UserTable() {
                   <div class="text-xs text-gray-500 max-w-[24ch]">{u.avatarName}</div>
                 </td>
                 <td class="px-2 py-1 align-middle font-semibold">{/* TODO: performance rank icons */ u.perfRank}</td>
-                <td class="px-2 py-1 align-middle text-xs text-gray-500 text-right">{u.accountAge}</td>
+                <td class="px-2 py-1 align-middle text-xs text-gray-500 text-right">{u.accountCreated !== null ? formatAccountAge(u.accountCreated) : ''}</td>
                 <td class="px-2 py-1 align-middle text-xs text-right">{new Date(u.joinTime*1000).toLocaleTimeString()}</td>
                 <td class="px-2 py-1 align-middle text-xs text-right">{u.leaveTime !== null ? new Date(u.leaveTime*1000).toLocaleTimeString() : ''}</td>
                 <td class="px-2 py-1 align-middle overflow-hidden flex-grow">
@@ -196,4 +193,27 @@ export default function UserTable() {
       </div>
     </div>
   );
+}
+
+function formatAccountAge(accountCreated: number | null): string {
+  if (accountCreated === null) return '';
+  const now = Date.now() / 1000;
+  const ageSeconds = now - accountCreated;
+  const ageDays = Math.floor(ageSeconds / (60 * 60 * 24));
+  // TODO: consider account "ages" in the future (make them negative)
+  if (ageDays >= 365) {
+    const years = Math.floor(ageDays / 365);
+    return `${years}y`;
+  } else if (ageDays >= 30) {
+    const months = Math.floor(ageDays / 30);
+    return `${months}mo`;
+  } else if (ageDays >= 1) {
+    return `${ageDays}d`;
+  } else if (ageSeconds >= 3600) {
+    return `${Math.floor(ageSeconds / 3600)}h`;
+  } else if (ageSeconds >= 60) {
+    return `${Math.floor(ageSeconds / 60)}m`;
+  } else {
+    return `${Math.floor(ageSeconds)}s`;
+  }
 }

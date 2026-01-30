@@ -7,6 +7,8 @@ use vrchatapi::{apis::configuration::Configuration, models::RegisterUserAccount2
 #[macro_use]
 mod request;
 
+pub mod user;
+
 #[derive(Debug, Clone)]
 pub struct VrchatApiState {
     pub mode: VrchatApiMode,
@@ -302,26 +304,24 @@ pub fn vrchat_api_plugin() -> tauri::plugin::TauriPlugin<Wry> {
             let app_handle = app.clone();
             let app_handle_for_once = app_handle.clone();
             app_handle.once("vrcmrd:ui-ready", move |_e| {
-                println!("Initializing VRChat API...");
-                *app_handle_for_once
-                    .state::<VrchatApiStateMutex>()
-                    .try_lock()
-                    .unwrap() = VrchatApiState {
-                    mode: VrchatApiMode::Preparing,
-                    cookies: None,
-                    config: None,
-                };
-                // These clones are also needed to prevent borrowing issues. Yay rust!
-                let task_handle = app_handle_for_once.clone();
-                let app_handle_reset_state = app_handle_for_once.clone();
                 tauri::async_runtime::spawn(async move {
+                    println!("Initializing VRChat API...");
+                    *app_handle_for_once
+                        .state::<VrchatApiStateMutex>()
+                        .lock().await = VrchatApiState {
+                        mode: VrchatApiMode::Preparing,
+                        cookies: None,
+                        config: None,
+                    };
+                    // These clones are also needed to prevent borrowing issues. Yay rust!
+                    let task_handle = app_handle_for_once.clone();
+                    let app_handle_reset_state = app_handle_for_once.clone();
                     match initialize_api(task_handle).await {
                         Ok(_) => (), // The API is ready and the configuration state has been updated.
                         Err(_) => {
                             *app_handle_reset_state
                                 .state::<VrchatApiStateMutex>()
-                                .try_lock()
-                                .unwrap() = VrchatApiState::not_ready();
+                                .lock().await = VrchatApiState::not_ready();
                         }
                     }
                     drop(app_handle_for_once);

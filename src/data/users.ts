@@ -6,7 +6,7 @@ export type User = {
   username: string;
   avatarName: string;
   perfRank: PerformanceRank;
-  accountAge: string; // e.g. "3y"
+  accountCreated: number | null; // e.g. "3y"
   joinTime: number; // e.g. "13:12"
   leaveTime: number | null; // e.g. "13:24"
   advisories: boolean;
@@ -21,7 +21,7 @@ export const users: User[] = [
     username: 'NeonSparrow',
     avatarName: 'Neon Sparrow',
     perfRank: 'Excellent',
-    accountAge: '4y',
+    accountCreated: 4,
     joinTime: 7203,
     leaveTime: 7357,
     advisories: true,
@@ -33,7 +33,7 @@ export const users: User[] = [
     username: 'PixelPanda',
     avatarName: 'Pixel Panda',
     perfRank: 'Good',
-    accountAge: '1y',
+    accountCreated: 1,
     joinTime: 7254,
     leaveTime: 7320,
     advisories: false,
@@ -45,7 +45,7 @@ export const users: User[] = [
     username: 'Skyline',
     avatarName: 'Skyline',
     perfRank: 'Medium',
-    accountAge: '6mo',
+    accountCreated: 5,
     joinTime: 7100,
     leaveTime: 7230,
     advisories: false,
@@ -57,7 +57,7 @@ export const users: User[] = [
     username: 'Glitch',
     avatarName: 'Glitch',
     perfRank: 'VeryPoor',
-    accountAge: '2y',
+    accountCreated: 2,
     joinTime: 7475,
     leaveTime: 7555,
     advisories: true,
@@ -69,7 +69,7 @@ export const users: User[] = [
     username: 'Luma',
     avatarName: 'Luma',
     perfRank: 'Medium',
-    accountAge: '9mo',
+    accountCreated: 0.75,
     joinTime: 7600,
     leaveTime: 7822,
     advisories: false,
