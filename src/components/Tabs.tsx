@@ -1,7 +1,7 @@
 import Preact, { ComponentChildren } from "preact";
 import { useRef, useState } from "preact/hooks";
 
-type TabItem = {
+export type TabItem = {
   id: string;
   label: string;
   content: ComponentChildren;
@@ -39,7 +39,6 @@ export default function Tabs({ tabs }: { tabs: TabItem[] }) {
   return <>
     <div
       role="tablist"
-      aria-label="Primary"
       className="flex flex-row space-x-1 pt-1 px-2 overflow-x-auto h-10"
     >
       {tabs.map((t, i) => (

@@ -8,8 +8,6 @@ pub async fn show_settings_window<R: Runtime>(app: tauri::AppHandle<R>, window: 
     if let Some(mut cfg) = winconfig {
         cfg.parent = Some(window.label().to_string());
         if let Some(window) = app.get_webview_window("settings") {
-            //window.parent = Some(window.label().to_string());
-            //window.dialog().unwrap();
             window.show().unwrap();
             window.set_focus().unwrap();
             return Ok(());

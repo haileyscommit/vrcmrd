@@ -1,35 +1,3 @@
-pub struct VrchatTryRequestOptions {
-    pub initial_backoff_secs: Option<u64>,
-    pub max_attempts: Option<u8>,
-    pub max_backoff_secs: Option<u64>,
-    pub wait_for_api_ready: bool,
-}
-impl Default for VrchatTryRequestOptions {
-    fn default() -> Self {
-        VrchatTryRequestOptions {
-            initial_backoff_secs: Some(5),
-            max_attempts: Some(5),
-            max_backoff_secs: Some(300),
-            wait_for_api_ready: false,
-        }
-    }
-}
-impl VrchatTryRequestOptions {
-    pub fn unlimited() -> Self {
-        VrchatTryRequestOptions {
-            initial_backoff_secs: None,
-            max_attempts: None,
-            max_backoff_secs: None,
-            wait_for_api_ready: false,
-        }
-    }
-    pub fn wait_for_api_ready(&self) -> Self {
-        VrchatTryRequestOptions {
-            wait_for_api_ready: true,
-            ..*self
-        }
-    }
-}
 
 /// Macro to perform an API request with retry logic on rate limiting (HTTP 429).
 /// The macro takes a guard to the API state, a closure representing the API request,
