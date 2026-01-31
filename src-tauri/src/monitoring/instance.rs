@@ -4,7 +4,7 @@ use chrono::NaiveDate;
 use tauri::{AppHandle, Emitter, Manager};
 
 use crate::{
-    memory::{instance::{InstanceState, InstanceStateMutex}, users::Users}, monitoring::VrcLogEntry, try_request, types::VrcMrdInstanceId
+    memory::{instance::{InstanceState, InstanceStateMutex}, users::Users}, monitoring::VrcLogEntry, try_request, types::{VrcMrdInstanceId, user::GetTrustRank}
 };
 use crate::api::VrchatApiStateMutex;
 
@@ -53,9 +53,8 @@ pub fn query_instance_info(app: AppHandle, instance_id: &VrcMrdInstanceId) {
             match response {
                 Ok(Some(instance_info)) => {
                     let handle = app.clone();
-                    //println!("Fetched instance info: {:?}", instance_info);
-                    println!("Received instance info for {}", &instance_info.id);
-                    let _ = handle.emit("vrcmrd:instance_details", instance_info.clone());
+                    println!("Fetched instance info: {:?}", instance_info);
+                    //println!("Received instance info for {}", &instance_info.id);
                     let name = {
                         if let Some(display_name) = instance_info.clone().display_name.flatten() {
                             display_name
@@ -64,17 +63,25 @@ pub fn query_instance_info(app: AppHandle, instance_id: &VrcMrdInstanceId) {
                             instance_info.world.name.clone()
                         }
                     };
+                    // Set window title to reflect instance name
+                    let title = format!("VRCMRD - {}", name);
+                    let _ = handle.get_webview_window("main").map(|w| w.set_title(&title));
+                    let _ = handle.emit("vrcmrd:instance_details", instance_info.clone());
                     let mut handled: Vec<String> = vec![];
                     handle.state::<InstanceStateMutex>().lock().unwrap().info = Some(instance_info.clone());
                     {
                         // Update users in list based on instance info
+                        // NOTE: apparently this only works sometimes; the VRC API has conditions for when it
+                        // includes this information. Therefore, this isn't very well tested, since I'm logging
+                        // in to test the API with an account that isn't logged in to the game...
                         let users_state = handle.state::<Mutex<Users>>();
                         let mut users_state = users_state.lock().unwrap();
                         for member in instance_info.clone().users.unwrap_or_default() {
                             for user in users_state.inner.iter_mut() {
                                 if user.id == member.clone().id {
+                                    // TODO: use the "system_probable_troll" field to add an advisory
                                     println!("Updating user {} in user list based on instance info", &member.id);
-                                    &handled.push(member.id.clone());
+                                    handled.push(member.id.clone());
                                     user.platform = {
                                         let platform = member.clone().last_platform;
                                         if platform == "standalonewindows" {
@@ -87,6 +94,7 @@ pub fn query_instance_info(app: AppHandle, instance_id: &VrcMrdInstanceId) {
                                             None
                                         }
                                     };
+                                    user.trust_rank = Some(member.clone().trust_rank());
                                     user.age_verified = member.clone().age_verified;
                                     if let Some(date_joined) = member.clone().date_joined {
                                         user.account_created = NaiveDate::parse_from_str(&date_joined, "%Y-%m-%d").ok().and_then(|d| d.and_hms_opt(0, 0, 0).and_then(|r| Some(r.and_utc().timestamp())));
@@ -102,18 +110,17 @@ pub fn query_instance_info(app: AppHandle, instance_id: &VrcMrdInstanceId) {
                     let users_state = users_state.lock().unwrap();
                     for user in users_state.inner.iter() {
                         if !handled.contains(&user.id) {
-                            println!("User {} not found in instance info, updating manually", &user.id);
-                            // Manually query user info for users not in instance info
-                            let handle = handle.clone();
-                            let user_id = user.id.clone();
-                            tauri::async_runtime::spawn(async move {
-                                crate::api::user::query_user_info(handle, &user_id).await;
-                            });
+                            if user.trust_rank.is_none() {
+                                println!("User {} not found in instance info, updating manually", &user.id);
+                                // Manually query user info for users not in instance info
+                                let handle = handle.clone();
+                                let user_id = user.id.clone();
+                                tauri::async_runtime::spawn(async move {
+                                    crate::api::user::query_user_info(handle, &user_id).await;
+                                });
+                            }
                         }
                     }
-                    // Set window title to reflect instance name
-                    let title = format!("VRCMRD - {}", name);
-                    let _ = handle.get_webview_window("main").map(|w| w.set_title(&title));
                 }
                 Ok(None) => {
                     eprintln!("API not ready, no instance info fetched for ID: {}", &instance_id.to_string());

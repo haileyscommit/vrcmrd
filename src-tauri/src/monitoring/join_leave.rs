@@ -42,6 +42,7 @@ pub fn handle_join_leave(app: AppHandle, line: &VrcLogEntry) -> Result<bool, tau
                     advisories: false, // this should contain the actual advisories
                     age_verified: false,
                     platform: None,
+                    trust_rank: None,
                 };
                 let state = app.state::<Mutex<Users>>();
                 let mut state = state.lock().unwrap();
@@ -74,6 +75,7 @@ pub fn handle_join_leave(app: AppHandle, line: &VrcLogEntry) -> Result<bool, tau
                     account_created: None,
                     join_time: 0, // TODO: store it as a unix timestamp and format on frontend
                     leave_time: Some(parse_timestamp(&line.timestamp)),
+                    trust_rank: None,
                     advisories: false, // this should contain the actual advisories
                     age_verified: false,
                     platform: None,

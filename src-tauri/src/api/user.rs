@@ -1,9 +1,11 @@
 use std::sync::Mutex;
 
 use chrono::NaiveDate;
+use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager, Runtime, State};
+use vrchatapi::models::User;
 
-use crate::{api::user, memory::users::Users, types::VrcMrdUser};
+use crate::{api::user, memory::users::Users, types::{VrcMrdUser, user::GetTrustRank}};
 
 /// Queries user information from the VRChat API and updates the user memory.
 pub async fn query_user_info(app: AppHandle, user_id: &str) {
@@ -25,8 +27,9 @@ pub async fn query_user_info(app: AppHandle, user_id: &str) {
     let app = app.clone();
     match user {
         Ok(Some(user_info)) => {
-            println!("Received user info for {}: {:?}", user_id, user_info);
+            println!("Received user info for {} via API", user_id);
             // TODO: introduce advisory for account age
+            // TODO: use the "system_probable_troll" field to add an advisory
             let vrcmrd_user = VrcMrdUser {
                 age_verified: user_info.clone().age_verified,
                 account_created: NaiveDate::parse_from_str(&user_info.date_joined, "%Y-%m-%d").ok().and_then(|d| d.and_hms_opt(0, 0, 0).and_then(|r| Some(r.and_utc().timestamp()))),
@@ -42,6 +45,7 @@ pub async fn query_user_info(app: AppHandle, user_id: &str) {
                         None
                     }
                 },
+                trust_rank: Some(user_info.trust_rank()),
                 ..base_user.unwrap().clone()
             };
             let users_state = app.state::<Mutex<Users>>();

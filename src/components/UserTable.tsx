@@ -1,4 +1,5 @@
-import { User } from '../data/users';
+/// <reference types="vite-plugin-svgr/client" />
+import { TrustRank, User } from '../data/users';
 import AlertIcon from "mdi-preact/AlertIcon";
 import CardAccountDetailsIcon from "mdi-preact/CardAccountDetailsIcon";
 import AndroidIcon from "mdi-preact/AndroidIcon";
@@ -119,7 +120,7 @@ export default function UserTable() {
             .map((u, idx) => (
               <tr
                 key={u.id}
-                class={(idx % 2 === 0 ? 'bg-white dark:bg-transparent' : 'bg-gray-50 dark:bg-gray-800/30') + ' h-[32px] hover:bg-gray-200 dark:hover:bg-gray-800 cursor-pointer active:bg-gray-50 dark:active:bg-black/50'}
+                class={(idx % 2 === 0 ? 'bg-white dark:bg-transparent' : 'bg-gray-50 dark:bg-gray-800/30') + (u.leaveTime ? ' opacity-75' : '') + ' h-[32px] hover:bg-gray-200 dark:hover:bg-gray-800 cursor-pointer active:bg-gray-50 dark:active:bg-black/50'}
                 onContextMenu={async (e) => {
                   e.preventDefault();
                   const cm = await menu.Menu.new({id: `ucm-${u.id}`, items: [
@@ -156,28 +157,58 @@ export default function UserTable() {
                 <td class="px-2 py-1 align-middle overflow-hidden flex-grow">
                   <div class="text-xs text-gray-500 max-w-[24ch]">{u.avatarName}</div>
                 </td>
-                <td class="px-2 py-1 align-middle font-semibold">{/* TODO: performance rank icons */ u.perfRank}</td>
-                <td class="px-2 py-1 align-middle text-xs text-gray-500 text-right">{u.accountCreated !== null ? formatAccountAge(u.accountCreated) : ''}</td>
+                <td class="px-2 align-middle font-semibold">
+                  <div class="tooltip" aria-hidden>
+                    {u.perfRank ? <img src={{
+                      "Excellent": "/assets/perf/excellent.png",
+                      "Good": "/assets/perf/good.png",
+                      "Medium": "/assets/perf/medium.png",
+                      "Poor": "/assets/perf/poor.png",
+                      "VeryPoor": "/assets/perf/very-poor.png",
+                    }[u.perfRank]} class="w-5 h-5" /> : "?"}
+                    <div class="tooltip-tip">{u.perfRank}</div>
+                  </div>
+                </td>
+                <td class="px-2 py-1 align-middle text-xs text-gray-500 text-right">{formatAccountAge(u.accountCreated)}</td>
                 <td class="px-2 py-1 align-middle text-xs text-right">{new Date(u.joinTime*1000).toLocaleTimeString()}</td>
                 <td class="px-2 py-1 align-middle text-xs text-right">{u.leaveTime !== null ? new Date(u.leaveTime*1000).toLocaleTimeString() : ''}</td>
                 <td class="px-2 py-1 align-middle overflow-hidden flex-grow">
                   <div class="flex items-center justify-end gap-2">
                   {u.advisories && (
-                    <div class="tooltip right" aria-hidden>
+                    <div class="tooltip left" aria-hidden>
                       { /* TODO: change color/icon for highest level advisory */ }
                       <AlertIcon />
                       <div class="tooltip-tip">Advisories added by user</div>
                     </div>
                   )}
 
-                  {u.ageVerified && (
+                  {/* TODO: merge with Trust Rank
+                  {u.ageVerified && !u.trustRank && (
                       <div class="tooltip right" aria-hidden>
                       <CardAccountDetailsIcon />
                       <div class="tooltip-tip">Age verified</div>
                       </div>
+                  )} */}
+
+                  {u.trustRank && (
+                    <div class="tooltip" aria-hidden>
+                      {/* TODO: hide Nuisance and turn it into an advisory, or use a different icon */}
+                      <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" class={"w-4 h-4" + {
+                          "Nuisance": " text-gray-400",
+                          "Visitor": " text-black dark:text-white",
+                          "NewUser": " text-blue-400",
+                          "User": " text-green-400",
+                          "KnownUser": " text-orange-400",
+                          "TrustedUser": " text-purple-400",
+                          "Admin": " text-red-400"
+                        }[u.trustRank]}>
+                        <use href={u.ageVerified ? '/assets/trust-verified.svg' : '/assets/trust.svg'} aria-label={trustRankLabel(u.trustRank, u.ageVerified)} />
+                      </svg>
+                      <div class="tooltip-tip">{trustRankLabel(u.trustRank, u.ageVerified)}</div>
+                    </div>
                   )}
 
-                  <div class="tooltip right" aria-hidden>
+                  <div class="tooltip" aria-hidden>
                       {u.platform === 'pc' && <MonitorIcon className='text-blue-400' />}
                       {u.platform === 'android' && <AndroidIcon className='text-green-400' />}
                       {u.platform === 'ios' && <AppleIcon />}
@@ -216,4 +247,17 @@ function formatAccountAge(accountCreated: number | null): string {
   } else {
     return `${Math.floor(ageSeconds)}s`;
   }
+}
+
+function trustRankLabel(rank: TrustRank, ageVerified?: boolean): string {
+  const base = {
+    "Nuisance": "Nuisance",
+    "Visitor": "Visitor",
+    "NewUser": "New User",
+    "User": "User",
+    "KnownUser": "Known User",
+    "TrustedUser": "Trusted User",
+    "Admin": "VRChat Staff"
+  }[rank] || "Unknown";
+  return ageVerified ? `${base} (Age Verified)` : base;
 }

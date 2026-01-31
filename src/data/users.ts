@@ -12,7 +12,10 @@ export type User = {
   advisories: boolean;
   ageVerified: boolean;
   platform: Platform | null;
+  trustRank?: TrustRank;
 };
+
+export type TrustRank = 'Nuisance' | 'Visitor' | 'NewUser' | 'User' | 'KnownUser' | 'TrustedUser' | 'Admin';
 
 /** @deprecated Get actual users instead */
 export const users: User[] = [
@@ -26,7 +29,8 @@ export const users: User[] = [
     leaveTime: 7357,
     advisories: true,
     ageVerified: true,
-    platform: 'pc'
+    platform: 'pc',
+    trustRank: 'TrustedUser'
   },
   {
     id: 'u2',

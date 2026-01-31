@@ -2,6 +2,7 @@
 import { defineConfig, UserConfigFn, UserConfigFnPromise } from "vite";
 import preact from "@preact/preset-vite";
 import tailwindcss from '@tailwindcss/vite';
+import svgr from 'vite-plugin-svgr';
 import { fileURLToPath } from "url";
 import path from "path";
 import fs from "fs";
@@ -24,6 +25,11 @@ export default defineConfig(async () => ({
   plugins: [
     preact(),
     tailwindcss(),
+    svgr({
+      svgrOptions: {
+        jsxRuntime: 'classic-preact',
+      },
+    }),
   ],
 
   build: {

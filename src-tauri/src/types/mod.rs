@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 mod instance_id;
+pub mod user;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -14,6 +15,7 @@ pub struct VrcMrdUser {
     pub advisories: bool,
     pub age_verified: bool,
     pub platform: Option<String>,
+    pub trust_rank: Option<user::TrustRank>,
 }
 
 /* References:

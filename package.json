@@ -20,7 +20,8 @@
     "@tauri-apps/plugin-dialog": "^2.6.0",
     "@tauri-apps/plugin-opener": "^2.5.3",
     "mdi-preact": "^9.4.0",
-    "preact": "^10.28.2"
+    "preact": "^10.28.2",
+    "vite-plugin-svgr": "^4.5.0"
   },
   "devDependencies": {
     "@preact/preset-vite": "^2.10.3",
