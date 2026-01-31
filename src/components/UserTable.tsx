@@ -1,7 +1,6 @@
 /// <reference types="vite-plugin-svgr/client" />
 import { TrustRank, User } from '../data/users';
 import AlertIcon from "mdi-preact/AlertIcon";
-import CardAccountDetailsIcon from "mdi-preact/CardAccountDetailsIcon";
 import AndroidIcon from "mdi-preact/AndroidIcon";
 import AppleIcon from "mdi-preact/AppleIcon";
 import MonitorIcon from "mdi-preact/MonitorIcon";
@@ -31,7 +30,7 @@ export default function UserTable() {
     );
   }
   useEffect(() => {
-    var currentInstanceId: string | null = null;
+    //var currentInstanceId: string | null = null;
     // This effect pre-populates the page and handles events from the backend that update the user list.
     const initialUsers = async () => {
       invoke<User[]>('get_users').then(fetchedUsers => {
@@ -91,6 +90,7 @@ export default function UserTable() {
       joinUnlisten.then(unlisten => unlisten());
       leaveUnlisten.then(unlisten => unlisten());
       updateUnlisten.then(unlisten => unlisten());
+      updateAllUnlisten.then(unlisten => unlisten());
       instanceUnlisten.then(unlisten => unlisten());
       document.removeEventListener('vrcmrd:soft-refresh', softRefreshList);
       clearInterval(refreshListInterval);

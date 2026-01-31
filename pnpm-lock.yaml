@@ -26,6 +26,9 @@ importers:
       mdi-preact:
         specifier: ^9.4.0
         version: 9.4.0(preact@10.28.2)
+      overlayscrollbars:
+        specifier: ^2.14.0
+        version: 2.14.0
       preact:
         specifier: ^10.28.2
         version: 10.28.2
@@ -1205,6 +1208,9 @@ packages:
 
   nth-check@2.1.1:
     resolution: {integrity: sha512-lqjrjmaOoAnWfMmBPL+XNnynZh2+swxiX3WUE0s4yEHI6m+AwrK2UZOimIRl3X/4QctVqS8AiZjFqyOGrMXb/w==}
+
+  overlayscrollbars@2.14.0:
+    resolution: {integrity: sha512-RjV0pqc79kYhQLC3vTcLRb5GLpI1n6qh0Oua3g+bGH4EgNOJHVBGP7u0zZtxoAa0dkHlAqTTSYRb9MMmxNLjig==}
 
   parent-module@1.0.1:
     resolution: {integrity: sha512-GQ2EWRpQV8/o+Aw8YqtfZZPfNRWZYkbidE9k5rpl/hC3vtHHBfGm2Ifi6qWV+coDGkrUKZAxE3Lot5kcsRlh+g==}
@@ -2421,6 +2427,8 @@ snapshots:
   nth-check@2.1.1:
     dependencies:
       boolbase: 1.0.0
+
+  overlayscrollbars@2.14.0: {}
 
   parent-module@1.0.1:
     dependencies:

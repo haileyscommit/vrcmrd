@@ -3,10 +3,12 @@
   "identifier": "default",
   "description": "Capability for the main window",
   "windows": [
-    "main"
+    "main",
+    "settings"
   ],
   "permissions": [
     "core:default",
+    "core:window:allow-show",
     "opener:default"
   ]
 }

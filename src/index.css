@@ -2,6 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 @import "tailwindcss";
+@import "overlayscrollbars/overlayscrollbars.css";
 
 /* Dense table styles */
 :root {
@@ -57,4 +58,35 @@
   border-radius: 9999px;
   font-weight: 600;
   font-size: 0.75rem;
+}
+
+
+.os-theme-custom.os-scrollbar {
+  --os-size: 8px;
+  --os-padding-perpendicular: 0px;
+  --os-padding-axis: 0px;
+}
+
+.os-theme-custom.os-scrollbar .os-scrollbar-track {
+  /* @apply bg-indigo-100 dark:bg-indigo-950; */
+  @apply bg-transparent;
+  /* border-radius: 4px; */
+}
+
+.os-theme-custom.os-scrollbar .os-scrollbar-handle {
+  @apply bg-indigo-200 dark:bg-indigo-900;
+  border-radius: 4px;
+  /* padding-left: auto; */
+  transition: background-color 0.2s ease;
+}
+
+/* .os-theme-custom.os-scrollbar:not(:hover) .os-scrollbar-handle {
+  width: 50%;
+} */
+
+.os-theme-custom.os-scrollbar .os-scrollbar-handle:hover {
+  @apply bg-indigo-700;
+}
+.os-theme-custom.os-scrollbar .os-scrollbar-handle:active {
+  @apply bg-indigo-800;
 }

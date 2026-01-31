@@ -12,10 +12,19 @@
   "app": {
     "windows": [
       {
-        "title": "vrcmrd",
+        "label": "main",
+        "title": "VRCMRD (Idle)",
         "width": 800,
         "height": 600,
         "url": "src/entrypoints/index.html"
+      },
+      {
+        "label": "settings",
+        "title": "Settings - VRCMRD",
+        "width": 600,
+        "height": 400,
+        "create": false,
+        "url": "src/entrypoints/settings.html"
       }
     ],
     "security": {

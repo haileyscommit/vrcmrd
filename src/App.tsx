@@ -6,11 +6,13 @@ import { useEffect } from "preact/hooks";
 import { event } from "@tauri-apps/api";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
+import { useOverlayScrollbars } from "./components/OverlayScrollbarsHook";
 
 export default function App() {
   if (import.meta.env.PROD) {
     window.addEventListener("contextmenu", e => e.preventDefault());
   }
+  useOverlayScrollbars();
   useEffect(() => {
     const unlisten = event.listen("vrcmrd:instance", async ev => {
       console.log("Instance changed:", ev.payload);

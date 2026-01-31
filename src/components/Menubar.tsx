@@ -1,3 +1,4 @@
+import { invoke } from "@tauri-apps/api/core";
 import { emit } from "@tauri-apps/api/event";
 
 export default function Menubar() {
@@ -9,7 +10,9 @@ export default function Menubar() {
     }} />
     <MenubarButton label="Manage access" onClick={() => { /* manage users logic */ }} />
     <MenubarButton label="Manage watchlists" onClick={() => { /* manage watched groups/users logic */ }} />
-    <MenubarButton label="Settings" onClick={() => { /* open settings window */ }} />
+    <MenubarButton label="Settings" onClick={() => { 
+      invoke('show_settings_window');
+    }} />
   </div>;
 }
 function MenubarButton(props: { label: string; onClick: () => void }) {

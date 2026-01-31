@@ -9,6 +9,10 @@ mod request;
 
 pub mod user;
 
+pub const VRCHAT_AUTH_COOKIE_CREDENTIAL_KEY: &str = "VRChatCookies";
+pub const VRCHAT_API_USERNAME_CREDENTIAL_KEY: &str = "VRC_USERNAME";
+pub const VRCHAT_API_PASSWORD_CREDENTIAL_KEY: &str = "VRC_PASSWORD";
+
 #[derive(Debug, Clone)]
 pub struct VrchatApiState {
     pub mode: VrchatApiMode,
@@ -82,11 +86,26 @@ pub async fn initialize_api(app: AppHandle) -> Result<(), ()> {
             std::sync::Arc::new(reqwest::cookie::Jar::default())
         }
     };
+    let username = {
+        let entry = keyring_core::Entry::new(VRCHAT_API_USERNAME_CREDENTIAL_KEY, "default");
+        if let Ok(e) = entry {
+            match e.get_password() {
+                Ok(username) => username,
+                Err(e) => {
+                    eprintln!("Failed to get stored username from keyring: {:?}", e);
+                    return Err(());
+                }
+            }
+        } else {
+            eprintln!("No stored username found in keyring.");
+            return Err(());
+        }
+    };
     config.client = reqwest::Client::builder()
         .cookie_provider(std::sync::Arc::clone(&cookie_jar))
         .build()
         .unwrap();
-    let api_key_entry = keyring_core::Entry::new("VRChatCookies", std::env::var("VRC_USERNAME").unwrap_or_default().as_str());
+    let api_key_entry = keyring_core::Entry::new(VRCHAT_AUTH_COOKIE_CREDENTIAL_KEY, username.as_str());
     if let Err(e) = &api_key_entry {
         eprintln!("No stored auth cookie found in keyring: {:?}", e);
         return Err(());
@@ -99,9 +118,22 @@ pub async fn initialize_api(app: AppHandle) -> Result<(), ()> {
     } else {
         println!("No stored auth cookie found; logging in with username and password!");
         config.basic_auth = Some((
-            // TODO: use settings screen and secure storage instead of env vars
-            std::env::var("VRC_USERNAME").unwrap_or_default(),
-            std::env::var("VRC_PASSWORD").ok(),
+            username.clone(),
+            {
+                let entry = keyring_core::Entry::new(VRCHAT_API_PASSWORD_CREDENTIAL_KEY, "default");
+                if let Ok(e) = entry {
+                    match e.get_password() {
+                        Ok(password) => Some(password),
+                        Err(e) => {
+                            eprintln!("Failed to get stored password from keyring: {:?}", e);
+                            return Err(());
+                        }
+                    }
+                } else {
+                    eprintln!("No stored password found in keyring.");
+                    return Err(());
+                }
+            },
         ));
     }
     #[cfg(debug_assertions)]
@@ -166,7 +198,7 @@ pub async fn initialize_api(app: AppHandle) -> Result<(), ()> {
                             let kv = cookie.splitn(2, '=').collect::<Vec<&str>>();
                             if kv[0].trim() == "auth" {
                                 println!("Auth cookie received!");
-                                keyring_core::Entry::new("VRChatCookies", user_info.username.as_deref().unwrap_or(&user_info.display_name))
+                                keyring_core::Entry::new(VRCHAT_AUTH_COOKIE_CREDENTIAL_KEY, user_info.username.as_deref().unwrap_or(&user_info.display_name))
                                     .and_then(|entry| entry.set_password(cookie))
                                     .unwrap_or_else(|e| eprintln!("Failed to store auth cookie in keyring: {:?}", e));
                             }
@@ -204,6 +236,47 @@ pub async fn initialize_api(app: AppHandle) -> Result<(), ()> {
             Err(())
         }
     }
+}
+
+#[tauri::command]
+pub async fn logout(app: tauri::AppHandle<Wry>) -> Result<(), String> {
+    try_request!(app.app_handle().clone(), |config| {
+        vrchatapi::apis::authentication_api::logout(config)
+    }, {});
+    // Clear stored credentials
+    let username_entry = keyring_core::Entry::new(VRCHAT_API_USERNAME_CREDENTIAL_KEY, "default");
+    if let Ok(u) = username_entry {
+        match u.get_password() {
+            Ok(username) => {
+                keyring_core::Entry::new(VRCHAT_AUTH_COOKIE_CREDENTIAL_KEY, &username)
+                    .and_then(|entry| entry.delete_credential())
+                    .map_err(|e| e.to_string())?;
+                u.delete_credential().map_err(|e| e.to_string())?;
+            }
+            Err(keyring_core::Error::NoEntry) => {
+                // No existing entry; nothing to delete
+            }
+            Err(e) => {
+                eprintln!("Failed to access existing username entry: {}", e);
+                //return Err(e.to_string());
+            }
+        };
+    } else {
+        eprintln!("Failed to create username entry: {}", username_entry.err().unwrap());
+        //return Err("Failed to create username entry".into());
+    };
+    let password_entry = keyring_core::Entry::new(VRCHAT_API_PASSWORD_CREDENTIAL_KEY, "default");
+    if let Ok(p) = password_entry {
+        p.delete_credential().map_err(|e| e.to_string())?;
+    } else {
+        eprintln!("Failed to find password entry: {}", password_entry.err().unwrap());
+        //return Err("Failed to create password entry".into());
+    };
+    // Reset API state
+    let api_state_mutex = app.state::<VrchatApiStateMutex>().clone();
+    let mut api_state = api_state_mutex.lock().await;
+    *api_state = VrchatApiState::not_ready();
+    Ok(())
 }
 
 #[tauri::command]

@@ -8,6 +8,7 @@ mod memory;
 mod monitoring;
 mod types;
 mod window;
+mod settings;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
@@ -22,6 +23,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_prevent_default::debug())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(monitoring::monitoring_plugin())
         .plugin(memory::users::user_memory_plugin())
         .plugin(memory::instance::instance_memory_plugin())
@@ -33,13 +35,17 @@ pub fn run() {
             api::submit_2fa_token,
             api::cancel_login,
             window::user::show_user_details,
+            window::show_settings_window,
+            settings::update_config,
+            settings::secret::update_credentials,
+            api::logout,
         ])
         .setup(|app| {
-            let salt_path = app
-                .path()
-                .app_local_data_dir()
-                .expect("could not resolve app local data path")
-                .join("salt.txt");
+            // let salt_path = app
+            //     .path()
+            //     .app_local_data_dir()
+            //     .expect("could not resolve app local data path")
+            //     .join("salt.txt");
             #[cfg(target_os = "windows")]
             keyring_core::set_default_store(windows_native_keyring_store::Store::new_with_configuration(&HashMap::from([
                 ("prefix", "vrcmrd:".into()),
