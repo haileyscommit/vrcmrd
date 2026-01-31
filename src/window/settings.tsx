@@ -1,4 +1,3 @@
-import { invoke } from "@tauri-apps/api/core";
 import "../index.css";
 import { render } from "preact";
 import { useState } from "preact/hooks";

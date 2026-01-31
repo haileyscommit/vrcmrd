@@ -4,7 +4,7 @@ import "../index.css";
 import { useEffect, useState } from "preact/hooks";
 import { useOverlayScrollbars } from "../components/OverlayScrollbarsHook";
 import { invoke } from "@tauri-apps/api/core";
-import { GetUserInfoResponse, User } from "../data/users";
+import { GetUserInfoResponse } from "../data/users";
 import { formatAccountAge } from "../components/UserTable";
 import { render } from "preact/compat";
 
