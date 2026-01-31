@@ -1,8 +1,9 @@
 use std::{ops::Deref, sync::Mutex};
 
-use tauri::{Emitter, Manager, Runtime};
+use tauri::{Emitter, Manager, Runtime, Wry};
+use vrchatapi::models::LimitedUserInstance;
 
-use crate::types::VrcMrdUser;
+use crate::{try_request, types::{VrcMrdUser, user::CommonUser}};
 pub mod avatar;
 
 #[derive(Default)]
@@ -36,3 +37,41 @@ pub async fn get_users<R: Runtime>(
         }
     }
 }
+
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct GetUserInfoResponse {
+    pub local: Option<VrcMrdUser>,
+    pub remote: Option<LimitedUserInstance>,
+}
+
+#[tauri::command]
+pub async fn get_user_info(
+    app: tauri::AppHandle<Wry>,
+    user_id: &str,
+) -> Result<GetUserInfoResponse, String> {
+    let response = try_request!(app.clone(), |config| {
+        vrchatapi::apis::users_api::get_user(config, user_id)
+    }, { wait_for_api_ready: true }).await;
+    match response {
+        Ok(Some(user_info)) => {
+            let base_user = {
+                let users_state = app.state::<Mutex<Users>>();
+                let users_state = users_state.lock().unwrap();
+                users_state.inner.iter().find(|u| u.id == user_info.id).cloned()
+            };
+            let local_user = base_user;
+            let remote_user = Some(user_info);
+            Ok(GetUserInfoResponse {
+                local: local_user,
+                remote: remote_user.map(CommonUser::from).map(|u| u.into()),
+            })
+        }
+        Ok(None) => {
+            Err(format!("User not found for ID: {}", user_id))
+        }
+        Err(e) => {
+            Err(format!("Error fetching user info for ID {}: {:?}", user_id, e))
+        }
+    }
+}
+            

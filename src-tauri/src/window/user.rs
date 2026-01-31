@@ -12,9 +12,10 @@ pub async fn show_user_details<R: Runtime>(
     let window = tauri::WebviewWindowBuilder::from_config(
         app.app_handle(),
         &WindowConfig {
-            title: "User Details".into(), // TODO: include user name
+            title: format!("User Details - {}", user).into(),
             label: format!("user_details_{}", user),
             parent: Some(appWindow.label().to_string()),
+            url: tauri::WebviewUrl::App(format!("src/entrypoints/user.html#{}", user).into()),
             ..Default::default()
         },
     )

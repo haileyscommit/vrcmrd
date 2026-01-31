@@ -28,7 +28,7 @@ function Settings() {
 								))}
 							</div>
 						</div> },
-			]} loading={loading} title="Settings" />	
+			]} loading={loading} title="Settings" />
 		</div>
 	);
 }

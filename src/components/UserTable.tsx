@@ -1,10 +1,13 @@
 /// <reference types="vite-plugin-svgr/client" />
-import { TrustRank, User } from '../data/users';
+import { getHighestAdvisoryLevel, TrustRank, User } from '../data/users';
 import AlertIcon from "mdi-preact/AlertIcon";
 import AndroidIcon from "mdi-preact/AndroidIcon";
 import AppleIcon from "mdi-preact/AppleIcon";
 import MonitorIcon from "mdi-preact/MonitorIcon";
 import HelpOutlineIcon from "mdi-preact/HelpCircleOutlineIcon";
+import InfoIcon from "mdi-preact/InformationOutlineIcon";
+import ErrorIcon from "mdi-preact/AlertCircleIcon";
+import StopIcon from "mdi-preact/AlertOctagonIcon";
 import { useEffect, useState } from 'preact/hooks';
 import { listen } from '@tauri-apps/api/event';
 import { menu } from '@tauri-apps/api';
@@ -121,6 +124,7 @@ export default function UserTable() {
               <tr
                 key={u.id}
                 class={(idx % 2 === 0 ? 'bg-white dark:bg-transparent' : 'bg-gray-50 dark:bg-gray-800/30') + (u.leaveTime ? ' opacity-75' : '') + ' h-[32px] hover:bg-gray-200 dark:hover:bg-gray-800 cursor-pointer active:bg-gray-50 dark:active:bg-black/50'}
+                onClick={() => invoke("show_user_details", {user: u.id})}
                 onContextMenu={async (e) => {
                   e.preventDefault();
                   const cm = await menu.Menu.new({id: `ucm-${u.id}`, items: [
@@ -174,11 +178,18 @@ export default function UserTable() {
                 <td class="px-2 py-1 align-middle text-xs text-right">{u.leaveTime !== null ? new Date(u.leaveTime*1000).toLocaleTimeString() : ''}</td>
                 <td class="px-2 py-1 align-middle overflow-hidden flex-grow">
                   <div class="flex items-center justify-end gap-2">
-                  {u.advisories && (
+                  {u.advisories.length > 0 && (
                     <div class="tooltip left" aria-hidden>
                       { /* TODO: change color/icon for highest level advisory */ }
-                      <AlertIcon />
-                      <div class="tooltip-tip">Advisories added by user</div>
+                      {{
+                        0: <InfoIcon class="w-4 h-4 text-black dark:text-white" />,
+                        1: <AlertIcon class="w-4 h-4 text-yellow-400" />,
+                        2: <AlertIcon class="w-4 h-4 text-orange-400" />,
+                        3: <ErrorIcon class="w-4 h-4 text-red-400" />,
+                        4: <StopIcon class="w-4 h-4 text-red-400" />,
+                      }[getHighestAdvisoryLevel(u.advisories) ?? 0]}
+                      {/* Show advisory message if only one at highest level */}
+                      <div class="tooltip-tip">{u.advisories.length} advisories</div>
                     </div>
                   )}
 
@@ -226,7 +237,7 @@ export default function UserTable() {
   );
 }
 
-function formatAccountAge(accountCreated: number | null): string {
+export function formatAccountAge(accountCreated: number | null): string {
   if (accountCreated === null) return '';
   const now = Date.now() / 1000;
   const ageSeconds = now - accountCreated;
@@ -249,7 +260,7 @@ function formatAccountAge(accountCreated: number | null): string {
   }
 }
 
-function trustRankLabel(rank: TrustRank, ageVerified?: boolean): string {
+export function trustRankLabel(rank: TrustRank, ageVerified?: boolean): string {
   const base = {
     "Nuisance": "Nuisance",
     "Visitor": "Visitor",

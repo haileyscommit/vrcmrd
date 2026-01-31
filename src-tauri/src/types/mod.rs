@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 mod instance_id;
 pub mod user;
+pub mod advisories;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -12,7 +13,7 @@ pub struct VrcMrdUser {
     pub account_created: Option<i64>,     // e.g. "3y"
     pub join_time: i64,          // e.g. "13:12"
     pub leave_time: Option<i64>, // e.g. "13:24"
-    pub advisories: bool,
+    pub advisories: Vec<advisories::ActiveAdvisory>,
     pub age_verified: bool,
     pub platform: Option<String>,
     pub trust_rank: Option<user::TrustRank>,

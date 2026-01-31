@@ -9,10 +9,35 @@ export type User = {
   accountCreated: number | null; // e.g. "3y"
   joinTime: number; // e.g. "13:12"
   leaveTime: number | null; // e.g. "13:24"
-  advisories: boolean;
+  advisories: ActiveAdvisory[];
   ageVerified: boolean;
   platform: Platform | null;
   trustRank?: TrustRank;
+};
+
+export type GetUserInfoResponse = {
+  local: User | null;
+  remote: any; // TODO: define remote user type
+};
+
+export function getHighestAdvisoryLevel(advisories: ActiveAdvisory[]): number {
+  let highestLevel = 0;
+  for (const advisory of advisories) {
+    if (advisory.level > highestLevel) {
+      highestLevel = advisory.level;
+    }
+    if (highestLevel === 4) {
+      break;
+    }
+  }
+  return highestLevel;
+}
+
+export type ActiveAdvisory = {
+  id: string;
+  message: string;
+  level: 0 | 1 | 2 | 3 | 4;
+  relevantGroupId?: string;
 };
 
 export type TrustRank = 'Nuisance' | 'Visitor' | 'NewUser' | 'User' | 'KnownUser' | 'TrustedUser' | 'Admin';
@@ -27,7 +52,7 @@ export const users: User[] = [
     accountCreated: 4,
     joinTime: 7203,
     leaveTime: 7357,
-    advisories: true,
+    advisories: [],
     ageVerified: true,
     platform: 'pc',
     trustRank: 'TrustedUser'
@@ -40,7 +65,7 @@ export const users: User[] = [
     accountCreated: 1,
     joinTime: 7254,
     leaveTime: 7320,
-    advisories: false,
+    advisories: [],
     ageVerified: true,
     platform: 'android'
   },
@@ -52,7 +77,7 @@ export const users: User[] = [
     accountCreated: 5,
     joinTime: 7100,
     leaveTime: 7230,
-    advisories: false,
+    advisories: [],
     ageVerified: false,
     platform: 'ios'
   },
@@ -64,7 +89,7 @@ export const users: User[] = [
     accountCreated: 2,
     joinTime: 7475,
     leaveTime: 7555,
-    advisories: true,
+    advisories: [],
     ageVerified: false,
     platform: 'pc'
   },
@@ -76,7 +101,7 @@ export const users: User[] = [
     accountCreated: 0.75,
     joinTime: 7600,
     leaveTime: 7822,
-    advisories: false,
+    advisories: [],
     ageVerified: true,
     platform: 'ios'
   }

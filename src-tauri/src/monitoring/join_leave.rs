@@ -2,7 +2,10 @@ use std::sync::Mutex;
 
 use crate::api::user::thread_query_user_info;
 use crate::memory::users::Users;
+use crate::types::advisories::ActiveAdvisory;
+use crate::types::user::{CommonUser, GetTrustRank, TrustRank};
 use tauri::{AppHandle, Emitter, Manager};
+use vrchatapi::models::LimitedUserInstance;
 
 use crate::monitoring::VrcLogEntry;
 use crate::types::VrcMrdUser;
@@ -39,7 +42,7 @@ pub fn handle_join_leave(app: AppHandle, line: &VrcLogEntry) -> Result<bool, tau
                     account_created: None,
                     join_time: parse_timestamp(&line.timestamp),
                     leave_time: None,
-                    advisories: false, // this should contain the actual advisories
+                    advisories: vec![], // this should contain the actual advisories
                     age_verified: false,
                     platform: None,
                     trust_rank: None,
@@ -63,30 +66,33 @@ pub fn handle_join_leave(app: AppHandle, line: &VrcLogEntry) -> Result<bool, tau
     } else if let Some(rest) = message.strip_prefix("[Behaviour] OnPlayerLeft ") {
         // rest is like "Player Name (usr_xxx)"
         if let (Some(open), Some(close)) = (rest.rfind('('), rest.rfind(')')) {
+            let user: VrcMrdUser;
             if open < close {
                 let player_name = rest[..open].trim().to_string();
                 let player_id = rest[open + 1..close].to_string();
-                //println!("Player left: {} ({})", player_name, player_id);
-                let user = VrcMrdUser {
-                    id: player_id,
-                    username: player_name,
-                    avatar_name: String::new(),
-                    perf_rank: "VeryPoor".to_string(),
-                    account_created: None,
-                    join_time: 0, // TODO: store it as a unix timestamp and format on frontend
-                    leave_time: Some(parse_timestamp(&line.timestamp)),
-                    trust_rank: None,
-                    advisories: false, // this should contain the actual advisories
-                    age_verified: false,
-                    platform: None,
-                };
+                let leave_time = parse_timestamp(&line.timestamp);
                 let state = app.state::<Mutex<Users>>();
                 let mut state = state.lock().unwrap();
                 // Update the user's leave_time if they exist
-                if let Some(existing_user) = state.inner.iter_mut().find(|u| u.id == user.id) {
-                    existing_user.leave_time = user.leave_time.clone();
+                if let Some(existing_user) = state.inner.iter_mut().find(|u| u.id == player_id) {
+                    existing_user.leave_time = Some(leave_time);
+                    user = existing_user.clone();
                 } else {
                     // If user not found, add them (this shouldn't normally happen)
+                    eprintln!("Warning: Player left who hadn't joined: '{}' ({})", player_name, player_id);
+                    user = VrcMrdUser {
+                        id: player_id,
+                        username: player_name,
+                        avatar_name: String::new(),
+                        perf_rank: "VeryPoor".to_string(),
+                        account_created: None,
+                        join_time: 0, // TODO: store it as a unix timestamp and format on frontend
+                        leave_time: Some(leave_time),
+                        trust_rank: None,
+                        advisories: vec![], // this should contain the actual advisories
+                        age_verified: false,
+                        platform: None,
+                    };
                     state.inner.push(user.clone());
                 }
                 return app.emit("vrcmrd:leave", user).and(Ok(true));

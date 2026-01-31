@@ -4,7 +4,7 @@ use chrono::NaiveDate;
 use tauri::{AppHandle, Emitter, Manager};
 
 use crate::{
-    memory::{instance::{InstanceState, InstanceStateMutex}, users::Users}, monitoring::VrcLogEntry, try_request, types::{VrcMrdInstanceId, user::GetTrustRank}
+    api::user::with_advisories, memory::{instance::{InstanceState, InstanceStateMutex}, users::Users}, monitoring::VrcLogEntry, try_request, types::{VrcMrdInstanceId, user::GetTrustRank}
 };
 use crate::api::VrchatApiStateMutex;
 
@@ -94,6 +94,7 @@ pub fn query_instance_info(app: AppHandle, instance_id: &VrcMrdInstanceId) {
                                             None
                                         }
                                     };
+                                    user.advisories = with_advisories(member.clone().into(), user.advisories.clone());
                                     user.trust_rank = Some(member.clone().trust_rank());
                                     user.age_verified = member.clone().age_verified;
                                     if let Some(date_joined) = member.clone().date_joined {

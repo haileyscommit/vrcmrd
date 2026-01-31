@@ -1,11 +1,10 @@
 use std::sync::Mutex;
 
 use chrono::NaiveDate;
-use serde::Serialize;
-use tauri::{AppHandle, Emitter, Manager, Runtime, State};
-use vrchatapi::models::User;
+use tauri::{AppHandle, Emitter, Manager};
+use vrchatapi::models::LimitedUserInstance;
 
-use crate::{api::user, memory::users::Users, types::{VrcMrdUser, user::GetTrustRank}};
+use crate::{memory::users::Users, types::{VrcMrdUser, advisories::{ActiveAdvisory}, user::{CommonUser, GetTrustRank, TrustRank}}};
 
 /// Queries user information from the VRChat API and updates the user memory.
 pub async fn query_user_info(app: AppHandle, user_id: &str) {
@@ -33,6 +32,7 @@ pub async fn query_user_info(app: AppHandle, user_id: &str) {
             let vrcmrd_user = VrcMrdUser {
                 age_verified: user_info.clone().age_verified,
                 account_created: NaiveDate::parse_from_str(&user_info.date_joined, "%Y-%m-%d").ok().and_then(|d| d.and_hms_opt(0, 0, 0).and_then(|r| Some(r.and_utc().timestamp()))),
+                advisories: with_advisories(user_info.clone().into(), base_user.clone().unwrap().advisories),
                 platform: {
                     let platform = user_info.clone().last_platform;
                     if platform == "standalonewindows" {
@@ -73,4 +73,42 @@ pub fn thread_query_user_info(app: AppHandle, user_id: &str) {
     tauri::async_runtime::spawn(async move {
         query_user_info(handle, &user_id).await;
     });
+}
+
+pub fn with_advisories(user: CommonUser, existing_advisories: Vec<ActiveAdvisory>) -> Vec<ActiveAdvisory> {
+    let mut advisories = existing_advisories.clone();
+    let user: LimitedUserInstance = user.into();
+    match user.trust_rank() {
+        TrustRank::Nuisance => {
+            if !advisories.iter().any(|a| a.id == format!("vrcmrd:trust_rank:{:?}", user.trust_rank())) {
+                advisories.push(ActiveAdvisory { 
+                    id: format!("vrcmrd:trust_rank:{:?}", user.trust_rank()),
+                    message: "User is Nuisance rank.".to_string(),
+                    level: crate::types::advisories::AdvisoryLevel::High,
+                    relevant_group_id: None,
+                });
+            }
+        },
+        _ => {}
+    };
+    if let Some(date_joined) = user.date_joined.clone() {
+        let joined_date = chrono::NaiveDate::parse_from_str(&date_joined, "%Y-%m-%d").ok();
+        if let Some(joined_date) = joined_date {
+            let account_age_days = (chrono::Local::now().naive_local().date() - joined_date).num_days();
+            // TODO: make the threshold configurable
+            if account_age_days < 3 {
+                if !advisories.iter().any(|a| a.id == "vrcmrd:account_age") {
+                    advisories.push(ActiveAdvisory {
+                        id: "vrcmrd:account_age".to_string(),
+                        message: format!("User's account is {} days old.", account_age_days),
+                        level: crate::types::advisories::AdvisoryLevel::Medium,
+                        relevant_group_id: None,
+                    });
+                }
+            }
+        } else {
+            eprintln!("Failed to parse date_joined for user {}: {}", user.id, user.date_joined.clone().unwrap());
+        }
+    }
+    advisories
 }

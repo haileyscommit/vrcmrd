@@ -35,6 +35,7 @@ pub fn run() {
             api::submit_2fa_token,
             api::cancel_login,
             window::user::show_user_details,
+            memory::users::get_user_info,
             window::show_settings_window,
             settings::update_config,
             settings::secret::update_credentials,
