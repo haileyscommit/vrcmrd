@@ -3,7 +3,7 @@ use std::{ops::Deref, sync::Mutex};
 use tauri::{Emitter, Manager, Runtime, Wry};
 use vrchatapi::models::LimitedUserInstance;
 
-use crate::{try_request, types::{VrcMrdUser, user::CommonUser}};
+use crate::{memory::users, try_request, types::{VrcMrdUser, user::CommonUser}};
 pub mod avatar;
 
 #[derive(Default)]
@@ -61,6 +61,16 @@ pub async fn get_user_info(
             };
             let local_user = base_user;
             let remote_user = Some(user_info);
+            {
+                let users_state = app.state::<Mutex<Users>>();
+                let mut users_state = users_state.lock().unwrap();
+                if let Some(existing_user) = users_state.inner.iter_mut().find(|u| u.id == user_id) {
+                    // Update existing user
+                    if let Some(ref remote) = remote_user {
+                        existing_user.update_from(&Into::<CommonUser>::into(remote.clone()));
+                    }
+                }
+            }
             Ok(GetUserInfoResponse {
                 local: local_user,
                 remote: remote_user.map(CommonUser::from).map(|u| u.into()),
