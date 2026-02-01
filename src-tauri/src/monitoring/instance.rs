@@ -4,7 +4,7 @@ use chrono::NaiveDate;
 use tauri::{AppHandle, Emitter, Manager};
 
 use crate::{
-    api::user::with_advisories, memory::{instance::{InstanceState, InstanceStateMutex}, users::Users}, monitoring::VrcLogEntry, try_request, types::{VrcMrdInstanceId, user::GetTrustRank}
+    api::user::with_advisories, memory::{instance::{InstanceState, InstanceStateMutex}, users::Users}, monitoring::VrcLogEntry, try_request, types::{VrcMrdInstanceId, user::{CommonUser, GetTrustRank}}
 };
 use crate::api::VrchatApiStateMutex;
 
@@ -82,24 +82,8 @@ pub fn query_instance_info(app: AppHandle, instance_id: &VrcMrdInstanceId) {
                                     // TODO: use the "system_probable_troll" field to add an advisory
                                     println!("Updating user {} in user list based on instance info", &member.id);
                                     handled.push(member.id.clone());
-                                    user.platform = {
-                                        let platform = member.clone().last_platform;
-                                        if platform == "standalonewindows" {
-                                            Some("pc".to_string())
-                                        } else if platform == "android" {
-                                            Some("android".to_string())
-                                        } else if platform == "ios" {
-                                            Some("ios".to_string())
-                                        } else {
-                                            None
-                                        }
-                                    };
-                                    user.advisories = with_advisories(member.clone().into(), user.advisories.clone());
-                                    user.trust_rank = Some(member.clone().trust_rank());
-                                    user.age_verified = member.clone().age_verified;
-                                    if let Some(date_joined) = member.clone().date_joined {
-                                        user.account_created = NaiveDate::parse_from_str(&date_joined, "%Y-%m-%d").ok().and_then(|d| d.and_hms_opt(0, 0, 0).and_then(|r| Some(r.and_utc().timestamp())));
-                                    }
+                                    let updated_user = user.update_from(&CommonUser::from(member.clone()));
+                                    *user = updated_user.clone();
                                     break; // from inner loop
                                 }
                             };

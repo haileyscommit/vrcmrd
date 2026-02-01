@@ -99,8 +99,20 @@ impl Into<LimitedUserInstance> for CommonUser {
     }
 }
 
+impl Into<LimitedUserInstance> for &CommonUser {
+    fn into(self) -> LimitedUserInstance {
+        self.inner.clone()
+    }
+}
+
 impl From<LimitedUserInstance> for CommonUser {
     fn from(user: LimitedUserInstance) -> CommonUser {
         CommonUser{inner: user}
+    }
+}
+
+impl From<&CommonUser> for CommonUser {
+    fn from(user: &CommonUser) -> CommonUser {
+        CommonUser{inner: user.inner.clone()}
     }
 }

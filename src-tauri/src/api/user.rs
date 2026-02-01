@@ -1,4 +1,4 @@
-use std::sync::Mutex;
+use std::{ops::Deref, sync::Mutex};
 
 use chrono::NaiveDate;
 use tauri::{AppHandle, Emitter, Manager};
@@ -29,25 +29,27 @@ pub async fn query_user_info(app: AppHandle, user_id: &str) {
             println!("Received user info for {} via API", user_id);
             // TODO: introduce advisory for account age
             // TODO: use the "system_probable_troll" field to add an advisory
-            let vrcmrd_user = VrcMrdUser {
-                age_verified: user_info.clone().age_verified,
-                account_created: NaiveDate::parse_from_str(&user_info.date_joined, "%Y-%m-%d").ok().and_then(|d| d.and_hms_opt(0, 0, 0).and_then(|r| Some(r.and_utc().timestamp()))),
-                advisories: with_advisories(user_info.clone().into(), base_user.clone().unwrap().advisories),
-                platform: {
-                    let platform = user_info.clone().last_platform;
-                    if platform == "standalonewindows" {
-                        Some("pc".to_string())
-                    } else if platform == "android" {
-                        Some("android".to_string())
-                    } else if platform == "ios" {
-                        Some("ios".to_string())
-                    } else {
-                        None
-                    }
-                },
-                trust_rank: Some(user_info.trust_rank()),
-                ..base_user.unwrap().clone()
-            };
+            // let vrcmrd_user = VrcMrdUser {
+            //     age_verified: user_info.clone().age_verified,
+            //     account_created: NaiveDate::parse_from_str(&user_info.date_joined, "%Y-%m-%d").ok().and_then(|d| d.and_hms_opt(0, 0, 0).and_then(|r| Some(r.and_utc().timestamp()))),
+            //     advisories: with_advisories(user_info.clone().into(), base_user.clone().unwrap().advisories),
+            //     platform: {
+            //         let platform = user_info.clone().last_platform;
+            //         if platform == "standalonewindows" {
+            //             Some("pc".to_string())
+            //         } else if platform == "android" {
+            //             Some("android".to_string())
+            //         } else if platform == "ios" {
+            //             Some("ios".to_string())
+            //         } else {
+            //             None
+            //         }
+            //     },
+            //     trust_rank: Some(user_info.trust_rank()),
+            //     ..base_user.unwrap().clone()
+            // };
+            let mut vrcmrd_user = base_user.unwrap();
+            let vrcmrd_user = vrcmrd_user.update_from(&CommonUser::from(user_info.clone()));
             let users_state = app.state::<Mutex<Users>>();
             let mut users_state = users_state.lock().unwrap();
             // Update or insert user
@@ -56,7 +58,7 @@ pub async fn query_user_info(app: AppHandle, user_id: &str) {
             } else {
                 users_state.inner.push(vrcmrd_user.clone());
             }
-            let _ = app.emit("vrcmrd:update-user", vrcmrd_user);
+            let _ = app.emit("vrcmrd:update-user", vrcmrd_user.clone());
         }
         Ok(None) => {
             eprintln!("User not found for ID: {}", user_id);
@@ -73,6 +75,31 @@ pub fn thread_query_user_info(app: AppHandle, user_id: &str) {
     tauri::async_runtime::spawn(async move {
         query_user_info(handle, &user_id).await;
     });
+}
+
+impl VrcMrdUser {
+    pub fn update_from(&mut self, other: &CommonUser) -> &mut Self {
+        let user: LimitedUserInstance = other.into();
+        self.age_verified = user.age_verified;
+        if let Some(date_joined) = user.date_joined.clone() {
+            self.account_created = NaiveDate::parse_from_str(&date_joined, "%Y-%m-%d").ok().and_then(|d| d.and_hms_opt(0, 0, 0).and_then(|r| Some(r.and_utc().timestamp())));
+        }
+        self.trust_rank = Some(user.trust_rank());
+        self.advisories = with_advisories(other.into(), self.advisories.clone());
+        self.platform = {
+            let platform = user.last_platform;
+            if platform == "standalonewindows" {
+                Some("pc".to_string())
+            } else if platform == "android" {
+                Some("android".to_string())
+            } else if platform == "ios" {
+                Some("ios".to_string())
+            } else {
+                None
+            }
+        };
+        self
+    }
 }
 
 pub fn with_advisories(user: CommonUser, existing_advisories: Vec<ActiveAdvisory>) -> Vec<ActiveAdvisory> {
