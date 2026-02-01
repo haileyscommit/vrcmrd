@@ -1,3 +1,5 @@
+import { LimitedUserInstance } from "vrchat";
+
 export type Platform = 'pc' | 'android' | 'ios';
 export type PerformanceRank = 'VeryPoor' | 'Poor' | 'Medium' | 'Good' | 'Excellent';
 
@@ -17,7 +19,7 @@ export type User = {
 
 export type GetUserInfoResponse = {
   local: User | null;
-  remote: any; // TODO: define remote user type
+  remote: LimitedUserInstance | null; // TODO: define remote user type
 };
 
 export function getHighestAdvisoryLevel(advisories: ActiveAdvisory[]): number {

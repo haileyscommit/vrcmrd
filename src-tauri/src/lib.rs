@@ -38,6 +38,7 @@ pub fn run() {
             memory::instance::get_instance_info,
             window::user::show_user_details,
             memory::users::get_user_info,
+            api::groups::get_all_groups,
             window::show_settings_window,
             settings::update_config,
             settings::get_config,

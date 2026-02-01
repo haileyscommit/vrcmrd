@@ -104,6 +104,7 @@ macro_rules! try_request {
     // options form with an inline struct-like block of optional fields
     ($handle:expr, $f:expr, { $( initial_backoff_secs : $initial_backoff_secs:tt )? $(,)? $( max_attempts : $max_attempts:tt )? $(,)? $( max_backoff_secs : $max_backoff_secs:tt )? $(,)? $( wait_for_api_ready : $wait_for_api_ready:tt )? $(,)? } ) => {{
         async {
+            use tauri::{Manager};
             let initial_backoff_secs: Option<u64> = None;
             $( let initial_backoff_secs = Some($initial_backoff_secs); )?
             let mut secs = initial_backoff_secs.unwrap_or(5);
