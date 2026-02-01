@@ -1,10 +1,9 @@
 use std::sync::Mutex;
 
-use chrono::NaiveDate;
 use tauri::{AppHandle, Emitter, Manager};
 
 use crate::{
-    api::user::with_advisories, memory::{instance::{InstanceState, InstanceStateMutex}, users::Users}, monitoring::VrcLogEntry, try_request, types::{VrcMrdInstanceId, user::{CommonUser, GetTrustRank}}
+    memory::{instance::{InstanceState, InstanceStateMutex}, users::Users}, monitoring::VrcLogEntry, try_request, types::{VrcMrdInstanceId, user::CommonUser}
 };
 use crate::api::VrchatApiStateMutex;
 

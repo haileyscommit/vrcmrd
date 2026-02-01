@@ -1,9 +1,9 @@
 use std::{ops::Deref, sync::Mutex};
 
-use tauri::{Emitter, Manager, Runtime, Wry};
+use tauri::{Manager, Runtime, Wry};
 use vrchatapi::models::LimitedUserInstance;
 
-use crate::{memory::users, try_request, types::{VrcMrdUser, user::CommonUser}};
+use crate::{try_request, types::{VrcMrdUser, user::CommonUser}};
 pub mod avatar;
 
 #[derive(Default)]

@@ -1,4 +1,4 @@
-use std::{ops::Deref, sync::Mutex};
+use std::sync::Mutex;
 
 use chrono::NaiveDate;
 use tauri::{AppHandle, Emitter, Manager};

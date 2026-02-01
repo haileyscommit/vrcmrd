@@ -13,38 +13,21 @@ use std::{
         mpsc::{self, Receiver},
         Arc,
     },
-    thread::{self, JoinHandle},
+    thread,
     time::Duration,
     vec,
 };
 
 use tauri::{
-    plugin::{Builder, TauriPlugin},
-    EventLoopMessage, Manager, Runtime, Wry,
+    plugin::{Builder, TauriPlugin}, Wry,
 };
 
 use crate::monitoring::path::get_monitor_path;
 
 pub struct VrcLogEntry {
     pub timestamp: String,
-    pub level: String,
+    //pub level: String,
     pub message: String,
-}
-
-/// Handle for stopping the background monitor thread.
-pub struct MonitorHandle {
-    stop_flag: Arc<AtomicBool>,
-    join: Option<JoinHandle<()>>,
-}
-
-impl MonitorHandle {
-    /// Signal the thread to stop and wait for it to finish.
-    pub fn stop(mut self) {
-        self.stop_flag.store(true, Ordering::SeqCst);
-        if let Some(join) = self.join.take() {
-            let _ = join.join();
-        }
-    }
 }
 
 fn is_timestamped_line(b: &[u8]) -> bool {
@@ -106,7 +89,7 @@ fn is_timestamped_line(b: &[u8]) -> bool {
 fn start_logfile_monitor(
     path: impl Into<PathBuf>,
     interval: Duration,
-) -> (Receiver<VrcLogEntry>, MonitorHandle) {
+) -> Receiver<VrcLogEntry> {
     // this is `mut` so that it can be updated if a new log file appears
     #[allow(unused_mut)]
     let mut path = path.into();
@@ -114,7 +97,7 @@ fn start_logfile_monitor(
     let stop_flag = Arc::new(AtomicBool::new(false));
     let thread_stop = stop_flag.clone();
 
-    let join = thread::spawn(move || {
+    let _ = thread::spawn(move || {
         let mut last_len: u64 = 0;
 
         while !thread_stop.load(Ordering::SeqCst) {
@@ -182,10 +165,10 @@ fn start_logfile_monitor(
                         .to_string()
                         .trim()
                         .to_string();
-                    let level_str = String::from_utf8_lossy(&line[20..30])
-                        .to_string()
-                        .trim()
-                        .to_string();
+                    // let level_str = String::from_utf8_lossy(&line[20..30])
+                    //     .to_string()
+                    //     .trim()
+                    //     .to_string();
                     let message_str = String::from_utf8_lossy(&line[34..])
                         .to_string()
                         .trim()
@@ -193,7 +176,7 @@ fn start_logfile_monitor(
                     //eprintln!("Processing line: {:?}, {:?}, {:?}", timestamp_str, level_str, message_str);
                     let log_entry = VrcLogEntry {
                         timestamp: timestamp_str,
-                        level: level_str,
+                        //level: level_str,
                         message: message_str,
                     };
                     if tx.send(log_entry).is_err() {
@@ -214,23 +197,17 @@ fn start_logfile_monitor(
         drop(tx);
     });
 
-    (
-        rx,
-        MonitorHandle {
-            stop_flag,
-            join: Some(join),
-        },
-    )
+    rx
 }
 
 pub fn start_monitoring_logfiles(app: tauri::AppHandle) {
     // Example usage
     let file_to_watch =
         env::var("APPDATA").unwrap_or_default() + "\\..\\LocalLow\\VRChat\\VRChat\\";
-    let (rx, handle) = start_logfile_monitor(file_to_watch, Duration::from_millis(200));
+    let rx = start_logfile_monitor(file_to_watch, Duration::from_millis(200));
 
     // Spawn a thread to print events (main thread could also handle them).
-    let printer = thread::spawn(move || {
+    let _ = thread::spawn(move || {
         println!("Monitoring VRChat logs.");
         for evt in rx {
             //println!("{:?}", evt);

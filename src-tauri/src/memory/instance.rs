@@ -1,4 +1,4 @@
-use std::{ops::Deref, sync::Mutex, time::Instant};
+use std::{ops::Deref, sync::{Arc, Mutex}};
 
 use tauri::{Emitter, Listener, Manager, Runtime, Wry};
 use vrchatapi::models::Instance;
@@ -17,96 +17,116 @@ pub struct InstanceState {
 pub type InstanceStateMutex = Mutex<InstanceState>;
 
 pub fn instance_memory_plugin() -> tauri::plugin::TauriPlugin<Wry> {
-    let mut listener: Option<u32> = None;
-    let mut listener2: Option<u32> = None;
-    let mut listener3: Option<u32> = None;
-    let mut lastJoinTime: Option<Instant> = None;
+    let listener = Arc::new(Mutex::new(None::<u32>));
+    let listener2 = Arc::new(Mutex::new(None::<u32>));
+    let listener3 = Arc::new(Mutex::new(None::<u32>));
     tauri::plugin::Builder::new("instance_memory")
-        .setup(move |app, _api| {
+    .setup({
+        let listener = listener.clone();
+        let listener2 = listener2.clone();
+        let listener3 = listener3.clone();
+        move |app, _api| {
             let instance_state = InstanceStateMutex::new(InstanceState::default());
             app.manage::<InstanceStateMutex>(instance_state);
-            let app_clone = app.app_handle().clone();
-            listener = Some(app.listen("vrcmrd:cache_refresh", move |_| {
-                let state = app_clone.state::<InstanceStateMutex>();
-                let state = state.lock().unwrap();
-                if state.id_info.is_none() {
-                    return;
-                }
-                crate::monitoring::instance::query_instance_info(app_clone.clone(), state.id_info.as_ref().unwrap());
-            }));
-            let app_clone = app.app_handle().clone();
-            listener2 = Some(app.listen("vrcmrd:join", move |_| {
-                static SETTLE_TX: std::sync::OnceLock<std::sync::Mutex<Option<std::sync::mpsc::Sender<()>>>> = std::sync::OnceLock::new();
-                let tx_mutex = SETTLE_TX.get_or_init(|| std::sync::Mutex::new(None));
-                let mut guard = tx_mutex.lock().unwrap();
 
-                // spawn the timer thread if not already running
-                if guard.is_none() {
-                    let (tx, rx) = std::sync::mpsc::channel::<()>();
-                    let app_for_thread = app_clone.clone();
-                    *guard = Some(tx.clone());
+            // cache_refresh listener
+            {
+                let app_clone = app.app_handle().clone();
+                let id = app.listen("vrcmrd:cache_refresh", move |_| {
+                    let state = app_clone.state::<InstanceStateMutex>();
+                    let state = state.lock().unwrap();
+                    if state.id_info.is_none() {
+                        return;
+                    }
+                    crate::monitoring::instance::query_instance_info(app_clone.clone(), state.id_info.as_ref().unwrap());
+                });
+                *listener.lock().unwrap() = Some(id);
+            }
 
-                    std::thread::spawn(move || {
-                        loop {
-                            match rx.recv_timeout(Duration::from_secs(1)) {
-                                Ok(_) => continue, // reset timer on each join signal
-                                Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {
-                                    // TODO: make sure the list isn't empty
-                                    let app_for_users = app_for_thread.clone();
-                                    let users = app_for_users.state::<Mutex<Users>>();
-                                    let users = users.lock().unwrap();
-                                    if users.inner.is_empty() {
-                                        println!("Not marking instance as settled yet; user list is still empty.");
-                                        continue;
+            // join listener
+            {
+                let app_clone = app.app_handle().clone();
+                let id2 = app.listen("vrcmrd:join", move |_| {
+                    static SETTLE_TX: std::sync::OnceLock<std::sync::Mutex<Option<std::sync::mpsc::Sender<()>>>> = std::sync::OnceLock::new();
+                    let tx_mutex = SETTLE_TX.get_or_init(|| std::sync::Mutex::new(None));
+                    let mut guard = tx_mutex.lock().unwrap();
+
+                    // spawn the timer thread if not already running
+                    if guard.is_none() {
+                        let (tx, rx) = std::sync::mpsc::channel::<()>();
+                        let app_for_thread = app_clone.clone();
+                        *guard = Some(tx.clone());
+
+                        std::thread::spawn(move || {
+                            loop {
+                                match rx.recv_timeout(Duration::from_secs(1)) {
+                                    Ok(_) => continue, // reset timer on each join signal
+                                    Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {
+                                        // TODO: make sure the list isn't empty
+                                        let app_for_users = app_for_thread.clone();
+                                        let users = app_for_users.state::<Mutex<Users>>();
+                                        let users = users.lock().unwrap();
+                                        if users.inner.is_empty() {
+                                            println!("Not marking instance as settled yet; user list is still empty.");
+                                            continue;
+                                        }
+                                        let _ = app_for_thread.emit("vrcmrd:settled", ());
+                                        break;
                                     }
-                                    let _ = app_for_thread.emit("vrcmrd:settled", ());
-                                    break;
+                                    Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => break,
                                 }
-                                Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => break,
                             }
-                        }
-                        // clear the sender so next join will create a new thread
-                        if let Some(m) = SETTLE_TX.get() {
-                            if let Ok(mut g) = m.lock() { *g = None; }
-                        }
-                    });
-                }
+                            // clear the sender so next join will create a new thread
+                            if let Some(m) = SETTLE_TX.get() {
+                                if let Ok(mut g) = m.lock() { *g = None; }
+                            }
+                        });
+                    }
 
-                // signal the timer to restart
-                if let Some(tx) = guard.as_ref() {
-                    let _ = tx.send(());
-                }
-            }));
-            let app_clone = app.app_handle().clone();
-            listener3 = Some(app.listen("vrcmrd:settled", move |_| {
-                let state = app_clone.state::<InstanceStateMutex>();
-                let mut state = state.lock().unwrap();
-                state.settled = true;
-                let id_info = state.id_info.clone();
-                drop(state); // Release the lock early
-                println!("Instance marked as settled.");
-                // Fetch instance info now that instance is settled
-                if let Some(info) = id_info {
-                    let handle = app_clone.clone();
-                    query_instance_info(handle, &info);
-                } else {
-                    eprintln!("Instance ID info not available when marking instance as settled.");
-                }
-            }));
+                    // signal the timer to restart
+                    if let Some(tx) = guard.as_ref() {
+                        let _ = tx.send(());
+                    }
+                });
+                *listener2.lock().unwrap() = Some(id2);
+            }
+
+            // settled listener
+            {
+                let app_clone = app.app_handle().clone();
+                let id3 = app.listen("vrcmrd:settled", move |_| {
+                    let state = app_clone.state::<InstanceStateMutex>();
+                    let mut state = state.lock().unwrap();
+                    state.settled = true;
+                    let id_info = state.id_info.clone();
+                    drop(state); // Release the lock early
+                    println!("Instance marked as settled.");
+                    // Fetch instance info now that instance is settled
+                    if let Some(info) = id_info {
+                        let handle = app_clone.clone();
+                        query_instance_info(handle, &info);
+                    } else {
+                        eprintln!("Instance ID info not available when marking instance as settled.");
+                    }
+                });
+                *listener3.lock().unwrap() = Some(id3);
+            }
+
             Ok(())
-        })
-        .on_drop(move |app| {
-            if let Some(listener_id) = listener {
-                app.unlisten(listener_id);
-            }
-            if let Some(listener_id) = listener2 {
-                app.unlisten(listener_id);
-            }
-            if let Some(listener_id) = listener3 {
-                app.unlisten(listener_id);
-            }
-        })
-        .build()
+        }
+    })
+    .on_drop(move |app| {
+        if let Some(listener_id) = *listener.lock().unwrap() {
+            app.unlisten(listener_id);
+        }
+        if let Some(listener_id) = *listener2.lock().unwrap() {
+            app.unlisten(listener_id);
+        }
+        if let Some(listener_id) = *listener3.lock().unwrap() {
+            app.unlisten(listener_id);
+        }
+    })
+    .build()
 }
 
 #[tauri::command]

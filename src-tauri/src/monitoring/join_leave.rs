@@ -2,10 +2,7 @@ use std::sync::Mutex;
 
 use crate::api::user::thread_query_user_info;
 use crate::memory::users::Users;
-use crate::types::advisories::ActiveAdvisory;
-use crate::types::user::{CommonUser, GetTrustRank, TrustRank};
 use tauri::{AppHandle, Emitter, Manager};
-use vrchatapi::models::LimitedUserInstance;
 
 use crate::monitoring::VrcLogEntry;
 use crate::types::VrcMrdUser;
@@ -26,8 +23,8 @@ pub fn handle_join_leave(app: AppHandle, line: &VrcLogEntry) -> Result<bool, tau
                     let avatars_state = app.state::<crate::memory::users::avatar::AvatarsStateMutex>();
                     let mut avatars_state = avatars_state.lock().unwrap();
                     // Check if there's a pending avatar name for this user
-                    if let Some(index) = avatars_state.pendingAvatarNames.iter().position(|(username, _)| username == &player_name) {
-                        let (_, avatar_name) = avatars_state.pendingAvatarNames.remove(index);
+                    if let Some(index) = avatars_state.pending_avatar_names.iter().position(|(username, _)| username == &player_name) {
+                        let (_, avatar_name) = avatars_state.pending_avatar_names.remove(index);
                         println!("Found pending avatar name '{}' for joining user '{}'", avatar_name, player_name);
                         Some(avatar_name)
                     } else {

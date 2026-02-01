@@ -24,6 +24,7 @@ pub async fn update_config<R: Runtime>(app: tauri::AppHandle<R>, key: String, va
     Ok(())
 }
 
+#[tauri::command]
 pub async fn get_config<R: Runtime>(app: tauri::AppHandle<R>, key: String) -> Result<Option<String>, String> {
     match app.store("vrcmrd-config.json") {
         Ok(store) => {

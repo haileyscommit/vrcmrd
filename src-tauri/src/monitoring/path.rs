@@ -1,4 +1,4 @@
-use std::{fs::File, path::PathBuf};
+use std::path::PathBuf;
 
 pub fn get_monitor_path(path: &mut PathBuf) -> Option<bool> {
     let scan_dir = if path.is_dir() {

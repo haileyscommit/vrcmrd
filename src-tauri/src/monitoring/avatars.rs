@@ -25,7 +25,7 @@ pub fn handle_switched_avatar(app: AppHandle, line: &VrcLogEntry) -> Result<bool
                 println!("User '{}' not found in user list yet, marking avatar '{}' as pending", username, avatar_name);
                 let avatars_state = app.state::<crate::memory::users::avatar::AvatarsStateMutex>();
                 let mut avatars_state = avatars_state.lock().unwrap();
-                (*avatars_state).pendingAvatarNames.push((username.clone(), avatar_name.clone()));
+                (*avatars_state).pending_avatar_names.push((username.clone(), avatar_name.clone()));
             } else {
                 //println!("User '{}' found in user list, updating avatar to '{}'", username, avatar_name);
                 // Update the user's avatar name directly

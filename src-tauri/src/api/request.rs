@@ -1,4 +1,3 @@
-
 /// Macro to perform an API request with retry logic on rate limiting (HTTP 429).
 /// The macro takes a guard to the API state, a closure representing the API request,
 /// and an optional struct-like block of options to customize the retry behavior.
@@ -21,6 +20,7 @@
 /// }
 /// ```
 #[macro_export]
+#[allow(unused_mut, unused_must_use)] // acknowledged. handled elsewhere.
 macro_rules! try_request {
     // no-options form -> use defaults
     ($handle:expr, $f:expr $(,)?) => {{
@@ -103,7 +103,6 @@ macro_rules! try_request {
 
     // options form with an inline struct-like block of optional fields
     ($handle:expr, $f:expr, { $( initial_backoff_secs : $initial_backoff_secs:tt )? $(,)? $( max_attempts : $max_attempts:tt )? $(,)? $( max_backoff_secs : $max_backoff_secs:tt )? $(,)? $( wait_for_api_ready : $wait_for_api_ready:tt )? $(,)? } ) => {{
-        #[allow(unused_mut)]
         async {
             let initial_backoff_secs: Option<u64> = None;
             $( let initial_backoff_secs = Some($initial_backoff_secs); )?

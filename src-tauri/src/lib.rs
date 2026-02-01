@@ -1,7 +1,6 @@
 #[cfg(target_os = "windows")]
 use std::collections::HashMap;
 
-use tauri::Manager;
 
 mod api;
 mod memory;
@@ -34,14 +33,18 @@ pub fn run() {
             memory::users::get_users,
             api::submit_2fa_token,
             api::cancel_login,
+            memory::instance::get_instance_id,
+            memory::instance::get_instance_id_info,
+            memory::instance::get_instance_info,
             window::user::show_user_details,
             memory::users::get_user_info,
             window::show_settings_window,
             settings::update_config,
+            settings::get_config,
             settings::secret::update_credentials,
             api::logout,
         ])
-        .setup(|app| {
+        .setup(|_app| {
             // let salt_path = app
             //     .path()
             //     .app_local_data_dir()
@@ -65,7 +68,7 @@ pub fn run() {
         .expect("error while running tauri application")
         .run_return(|_, e| {
             match e {
-                tauri::RunEvent::ExitRequested { api, .. } => {
+                tauri::RunEvent::ExitRequested {  .. } => {
                     keyring_core::unset_default_store();
                 }
                 tauri::RunEvent::Exit => {
