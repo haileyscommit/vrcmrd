@@ -124,3 +124,23 @@ pub async fn update_advisory(app: tauri::AppHandle<Wry>, advisory: Advisory) -> 
     app.emit("vrcmrd:advisories_updated", {}).map_err(|e| e.to_string())?;
     Ok(())
 }
+
+pub fn apply_templating(template: &str, variables: &std::collections::HashMap<&str, String>) -> String {
+    let mut result = template.to_string();
+    // {{:variable_name:}}, {{:variable_name||default_value:}}
+    for cap in regex::Regex::new(r"\{\{:(?P<var>[a-zA-Z0-9_]+)(\|\|(?P<default>[^:]*))?:\}\}")
+        .unwrap()
+        .captures_iter(template)
+    {
+        let var_name = &cap["var"];
+        let replacement = if let Some(value) = variables.get(var_name) {
+            value.clone()
+        } else if let Some(default) = cap.name("default") {
+            default.as_str().to_string()
+        } else {
+            "".to_string()
+        };
+        result = result.replace(&cap[0], &replacement);
+    }
+    result
+}

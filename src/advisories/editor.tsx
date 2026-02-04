@@ -5,7 +5,9 @@ import CloseIcon from "mdi-preact/CloseIcon";
 import DeleteIcon from "mdi-preact/DeleteIcon";
 import DownArrowIcon from "mdi-preact/MenuDownIcon";
 import { useState } from "preact/compat";
-import ConditionEditor from "./condition";
+import ConditionEditor, { NestedConditionTypes } from "./condition";
+import Dropdown from "../components/Dropdown";
+import PlusIcon from "mdi-preact/PlusIcon";
 
 export default function AdvisoryEditor({ advisory, isNew, setOverlay, setDialog }: { 
   advisory: Advisory,
@@ -87,6 +89,22 @@ export default function AdvisoryEditor({ advisory, isNew, setOverlay, setDialog 
       <div class="my-4">
         <label class="block mb-2 font-bold" for="advisory-message-template-input">Message Template:</label>
         <textarea id="advisory-message-template-input" class="w-full p-2 border border-gray-300 dark:border-gray-700 rounded" value={messageTemplate} onInput={(e) => setMessageTemplate((e.target as HTMLTextAreaElement).value)} rows={4} />
+        {/* Wrapping flex-row of chips that add templates when pressed */}
+        <div class="mt-2 flex flex-row gap-2 flex-wrap">
+          {NestedConditionTypes(condition).includes("UsernameContains") && <button class="px-2 py-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full text-sm hover:bg-gray-300 dark:hover:bg-gray-600" onClick={() => {
+            const insert = "{{:username:}}";
+            setMessageTemplate(messageTemplate + insert);
+          }}><PlusIcon class="inline align-middle w-4 h-4 mr-1 mb-1" />Username</button>}
+          {NestedConditionTypes(condition).includes("AccountAgeAtMostDays") && <button class="px-2 py-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full text-sm hover:bg-gray-300 dark:hover:bg-gray-600" onClick={() => {
+            const insert = "{{:account_age_days:}}";
+            setMessageTemplate(messageTemplate + insert);
+          }}><PlusIcon class="inline align-middle w-4 h-4 mr-1 mb-1" />Account Age (days)</button>}
+          {NestedConditionTypes(condition).includes("IsGroupMember") && <button class="px-2 py-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full text-sm hover:bg-gray-300 dark:hover:bg-gray-600" onClick={() => {
+            const insert = "{{:group_name:}}";
+            setMessageTemplate(messageTemplate + insert);
+          }}><PlusIcon class="inline align-middle w-4 h-4 mr-1 mb-1" />Group Name</button>}
+        </div>
+        <p class="mb-2 text-sm text-gray-600 dark:text-gray-400">The message that will be shown or spoken when this advisory is applied. You can use variables like <code>{'{{:variable||default:}}'}</code> to include specific context.</p>
       </div>
       <div class="my-4 flex items-center gap-2">
         <input id="send-notification-input" type="checkbox" checked={sendNotification} onChange={(e) => setSendNotification((e.target as HTMLInputElement).checked)} />

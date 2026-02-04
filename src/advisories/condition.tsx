@@ -166,3 +166,15 @@ function ConditionLabel(condition: AdvisoryCondition) {
 function htmlescape(str: string) {
   return ((str||"null").toString()).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 } 
+
+export function NestedConditionTypes(condition: AdvisoryCondition): string[] {
+  let types: string[] = [condition.type];
+  if (condition.type === "AllOf" || condition.type === "AnyOf") {
+    for (const subCondition of condition.data) {
+      types = types.concat(NestedConditionTypes(subCondition));
+    }
+  } else if (condition.type === "Not") {
+    types = types.concat(NestedConditionTypes(condition.data.data));
+  }
+  return types;
+} 

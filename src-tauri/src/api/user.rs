@@ -1,10 +1,10 @@
-use std::{cell::RefCell, ops::Deref, sync::Mutex};
+use std::{cell::RefCell, collections::HashMap, ops::Deref, sync::Mutex};
 
 use chrono::NaiveDate;
 use tauri::{AppHandle, Emitter, Manager};
 use vrchatapi::models::{LimitedUserGroups, LimitedUserInstance};
 
-use crate::{memory::{advisories::AdvisoryMemory, users::Users}, types::{VrcMrdUser, advisories::{ActiveAdvisory, AdvisoryCondition}, user::{CommonUser, GetTrustRank}}};
+use crate::{advisories::apply_templating, memory::{advisories::AdvisoryMemory, users::Users}, types::{VrcMrdUser, advisories::{ActiveAdvisory, AdvisoryCondition}, user::{CommonUser, GetTrustRank}}};
 
 /// Queries user information from the VRChat API and updates the user memory.
 pub async fn query_user_info(app: AppHandle, user_id: &str) {
@@ -119,6 +119,8 @@ pub fn with_advisories(app: AppHandle, user: CommonUser, existing_advisories: Ve
     for advisory in active_advisories.iter() {
         // TODO: handle templating in advisory messages (pass some info up here)
         let relevant_group_id: RefCell<Option<String>> = RefCell::new(None);
+        let templates = RefCell::new(HashMap::new());
+        templates.borrow_mut().insert("username", user.display_name.clone());
         if advisory.condition.evaluate(&|condition| match condition {
             AdvisoryCondition::UsernameContains(string) => {
                 user.display_name.to_lowercase().contains(&string.to_lowercase())
@@ -144,6 +146,8 @@ pub fn with_advisories(app: AppHandle, user: CommonUser, existing_advisories: Ve
                             continue;
                         }
                         *relevant_group_id.borrow_mut() = Some(group_id.clone());
+                        templates.borrow_mut().insert("group_id", group_id.clone());
+                        templates.borrow_mut().insert("group_name", group.name.clone().unwrap_or_default());
                         return true;
                     }
                 }
@@ -153,12 +157,15 @@ pub fn with_advisories(app: AppHandle, user: CommonUser, existing_advisories: Ve
                 if let Some(date_joined) = user.date_joined.clone() {
                     if let Ok(joined_date) = chrono::NaiveDate::parse_from_str(&date_joined, "%Y-%m-%d") {
                         let account_age_days = (chrono::Local::now().naive_local().date() - joined_date).num_days();
+                        // We add this template variable here because we have account_age_days here
+                        templates.borrow_mut().insert("account_age_days", account_age_days.to_string());
                         account_age_days <= days as i64
                     } else {
+                        eprintln!("Failed to parse date_joined for user {}: {}", user.id, date_joined);
                         false
                     }
                 } else {
-                    false
+                    advisories.iter().any(|a| a.id == advisory.id)
                 }
             },
             AdvisoryCondition::InstanceOwner(owner_id) => {
@@ -185,12 +192,18 @@ pub fn with_advisories(app: AppHandle, user: CommonUser, existing_advisories: Ve
             },
         }) {
             if advisories.iter().any(|a| a.id == advisory.id) {
-                continue; // keep the existing advisory if it's already present
+                // Update the existing advisory, especially if the advisory settings changed
+                for existing in advisories.iter_mut() {
+                    if existing.id == advisory.id {
+                        existing.message = apply_templating(advisory.message_template.clone().as_str(), &templates.borrow());
+                        existing.level = advisory.level.clone();
+                        existing.relevant_group_id = relevant_group_id.borrow().clone();
+                    }
+                }
             } else {
                 advisories.push(ActiveAdvisory {
                     id: advisory.id.clone(),
-                    // TODO: apply templating here
-                    message: advisory.message_template.clone(),
+                    message: apply_templating(advisory.message_template.clone().as_str(), &templates.borrow()),
                     level: advisory.level.clone(),
                     relevant_group_id: relevant_group_id.borrow().clone(),
                 });
@@ -200,39 +213,12 @@ pub fn with_advisories(app: AppHandle, user: CommonUser, existing_advisories: Ve
             advisories.retain(|a| a.id != advisory.id);
         }
     }
+    for advisory in existing_advisories.iter() {
+        // Remove any advisories that are no longer active (or have been deleted)
+        if !active_advisories.iter().any(|a| a.id == advisory.id) {
+            advisories.retain(|a| a.id != advisory.id);
+        }
+    }
     advisories
     // TODO: emit notices for each advisory added
-    // match user.trust_rank() {
-    //     TrustRank::Nuisance => {
-    //         if !advisories.iter().any(|a| a.id == format!("vrcmrd:trust_rank:{:?}", user.trust_rank())) {
-    //             advisories.push(ActiveAdvisory { 
-    //                 id: format!("vrcmrd:trust_rank:{:?}", user.trust_rank()),
-    //                 message: "User is Nuisance rank.".to_string(),
-    //                 level: crate::types::advisories::AdvisoryLevel::High,
-    //                 relevant_group_id: None,
-    //             });
-    //         }
-    //     },
-    //     _ => {}
-    // };
-    // if let Some(date_joined) = user.date_joined.clone() {
-    //     let joined_date = chrono::NaiveDate::parse_from_str(&date_joined, "%Y-%m-%d").ok();
-    //     if let Some(joined_date) = joined_date {
-    //         let account_age_days = (chrono::Local::now().naive_local().date() - joined_date).num_days();
-    //         // TODO: make the threshold configurable
-    //         if account_age_days < 3 {
-    //             if !advisories.iter().any(|a| a.id == "vrcmrd:account_age") {
-    //                 advisories.push(ActiveAdvisory {
-    //                     id: "vrcmrd:account_age".to_string(),
-    //                     message: format!("User's account is {} days old.", account_age_days),
-    //                     level: crate::types::advisories::AdvisoryLevel::Medium,
-    //                     relevant_group_id: None,
-    //                 });
-    //             }
-    //         }
-    //     } else {
-    //         eprintln!("Failed to parse date_joined for user {}: {}", user.id, user.date_joined.clone().unwrap());
-    //     }
-    // }
-    // advisories
 }
