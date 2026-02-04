@@ -5,7 +5,6 @@ import CloseIcon from "mdi-preact/CloseIcon";
 import DeleteIcon from "mdi-preact/DeleteIcon";
 import DownArrowIcon from "mdi-preact/MenuDownIcon";
 import { useState } from "preact/compat";
-import { useOverlayScrollbars } from "../components/OverlayScrollbarsHook";
 import ConditionEditor from "./condition";
 
 export default function AdvisoryEditor({ advisory, isNew, setOverlay, setDialog }: { 

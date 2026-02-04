@@ -2,12 +2,10 @@ import "../index.css";
 import { useState } from "preact/hooks";
 import { useOverlayScrollbars } from "../components/OverlayScrollbarsHook";
 import { render } from "preact";
-import CloseIcon from "mdi-preact/CloseIcon";
 import PlusIcon from "mdi-preact/PlusIcon";
 import { Tooltip } from 'react-tooltip'
 import AdvisoryList from "../advisories/list";
 import { invoke } from "@tauri-apps/api/core";
-import { Advisory } from "@app/bindings/Advisory";
 import defaultAdvisory from "../advisories/default";
 import AdvisoryEditor from "../advisories/editor";
 

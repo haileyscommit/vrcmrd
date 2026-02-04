@@ -1,7 +1,5 @@
 import { AdvisoryCondition } from "@app/bindings/AdvisoryCondition";
-import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
 import DeleteIcon from "mdi-preact/DeleteIcon";
-import DownArrowIcon from "mdi-preact/MenuDownIcon";
 import Dropdown from "../components/Dropdown";
 import MonitorIcon from "mdi-preact/MonitorIcon";
 import AndroidIcon from "mdi-preact/AndroidIcon";
@@ -12,7 +10,6 @@ export default function ConditionEditor({ condition, setCondition, removeConditi
   setCondition: (condition: AdvisoryCondition) => void ,
   removeCondition?: (() => void)
 }) {
-  const menuItemClasses = (active: boolean) => `w-full text-left p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg ${active ? 'bg-gray-100 dark:bg-gray-700' : ''}`;;
   const stringDataConditionTypes = [
     "UsernameContains",
     "AvatarMayBe",
