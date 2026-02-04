@@ -1,12 +1,12 @@
 /// <reference types="vite-plugin-svgr/client" />
 import { getHighestAdvisoryLevel, TrustRank, User } from '../data/users';
-import AlertIcon from "mdi-preact/AlertIcon";
 import AndroidIcon from "mdi-preact/AndroidIcon";
 import AppleIcon from "mdi-preact/AppleIcon";
 import MonitorIcon from "mdi-preact/MonitorIcon";
 import HelpOutlineIcon from "mdi-preact/HelpCircleOutlineIcon";
+import AlertIcon from "mdi-preact/AlertOutlineIcon";
 import InfoIcon from "mdi-preact/InformationOutlineIcon";
-import ErrorIcon from "mdi-preact/AlertCircleIcon";
+import ErrorIcon from "mdi-preact/AlertIcon";
 import StopIcon from "mdi-preact/AlertOctagonIcon";
 import { useEffect, useState } from 'preact/hooks';
 import { listen } from '@tauri-apps/api/event';
@@ -24,6 +24,12 @@ export default function UserTable() {
         const aTime = a.leaveTime ?? a.joinTime;
         const bTime = b.leaveTime ?? b.joinTime;
         return bTime - aTime;
+      })
+      .sort((a, b) => {
+        // Sort by advisory level
+        const aLevel = getHighestAdvisoryLevel(a.advisories) ?? 0;
+        const bLevel = getHighestAdvisoryLevel(b.advisories) ?? 0;
+        return bLevel - aLevel;
       })
       .sort((a, b) => {
         // Users currently in-world first (leaveTime === null)
@@ -144,6 +150,7 @@ export default function UserTable() {
                     }),
                     await menu.Submenu.new({
                       text: 'Suppress advisory for user',
+                      enabled: false, // TODO: enable when we can suppress advisories
                       items: [
                         await menu.MenuItem.new({ text: 'Watchlist 1' }),
                         await menu.MenuItem.new({ text: 'Watched avatar' }),
@@ -163,7 +170,7 @@ export default function UserTable() {
                   <div class="text-xs text-gray-500 max-w-[24ch]">{u.avatarName}</div>
                 </td>
                 <td class="px-2 align-middle font-semibold">
-                  <div class="tooltip" aria-hidden data-tooltip-id="tooltip" data-tooltip-content={u.perfRank}>
+                  <div data-tooltip-id="tooltip" data-tooltip-content={u.perfRank}>
                     {u.perfRank ? <img src={{
                       "Excellent": "/assets/perf/excellent.png",
                       "Good": "/assets/perf/good.png",
@@ -171,7 +178,6 @@ export default function UserTable() {
                       "Poor": "/assets/perf/poor.png",
                       "VeryPoor": "/assets/perf/very-poor.png",
                     }[u.perfRank]} class="w-5 h-5" /> : "?"}
-                    <div class="tooltip-tip">{u.perfRank}</div>
                   </div>
                 </td>
                 <td class="px-2 py-1 align-middle text-xs text-gray-500 text-right">{formatAccountAge(u.accountCreated)}</td>
@@ -180,30 +186,29 @@ export default function UserTable() {
                 <td class="px-2 py-1 align-middle overflow-hidden flex-grow">
                   <div class="flex items-center justify-end gap-2">
                   {u.advisories.length > 0 && (
-                    <div class="tooltip left" aria-hidden data-tooltip-id="tooltip" data-tooltip-content={`${u.advisories.length} advisories`}>
-                      { /* TODO: change color/icon for highest level advisory */ }
+                    <div data-tooltip-id="tooltip" data-tooltip-content={`${u.advisories.length} advisor${u.advisories.length !== 1 ? 'ies' : 'y'}`}>
                       {{
-                        0: <InfoIcon class="w-4 h-4 text-black dark:text-white" />,
-                        1: <AlertIcon class="w-4 h-4 text-yellow-400" />,
-                        2: <AlertIcon class="w-4 h-4 text-orange-400" />,
-                        3: <ErrorIcon class="w-4 h-4 text-red-400" />,
-                        4: <StopIcon class="w-4 h-4 text-red-400" />,
+                        0: <InfoIcon class="w-5 h-5 text-black dark:text-white" />,
+                        1: <AlertIcon class="w-5 h-5 text-yellow-400" />,
+                        2: <AlertIcon class="w-5 h-5 text-orange-400" />,
+                        3: <ErrorIcon class="w-5 h-5 text-red-400" />,
+                        4: <StopIcon class="w-5 h-5 text-red-400" />,
                       }[getHighestAdvisoryLevel(u.advisories) ?? 0]}
                       {/* Show advisory message if only one at highest level */}
-                      <div class="tooltip-tip">{u.advisories.length} advisories</div>
                     </div>
                   )}
 
-                  {/* TODO: merge with Trust Rank
+                  {/* keeping this for preferences where age verification is shown separately,
+                      such as when trust rank icons are hidden but age verification is shown,
+                      or when they're specifically set to show separately.
                   {u.ageVerified && !u.trustRank && (
-                      <div class="tooltip right" aria-hidden>
+                    <div data-tooltip-id="tooltip" data-tooltip-content="Age verified">
                       <CardAccountDetailsIcon />
-                      <div class="tooltip-tip">Age verified</div>
-                      </div>
+                    </div>
                   )} */}
 
                   {u.trustRank && (
-                    <div class="tooltip" aria-hidden data-tooltip-id="tooltip" data-tooltip-content={trustRankLabel(u.trustRank, u.ageVerified)}>
+                    <div data-tooltip-id="tooltip" data-tooltip-content={trustRankLabel(u.trustRank, u.ageVerified)}>
                       {/* TODO: hide Nuisance and turn it into an advisory, or use a different icon */}
                       <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" class={"w-4 h-4" + {
                           "Nuisance": " text-gray-400",
@@ -216,16 +221,14 @@ export default function UserTable() {
                         }[u.trustRank]}>
                         <use href={u.ageVerified ? '/assets/trust-verified.svg' : '/assets/trust.svg'} aria-label={trustRankLabel(u.trustRank, u.ageVerified)} />
                       </svg>
-                      <div class="tooltip-tip">{trustRankLabel(u.trustRank, u.ageVerified)}</div>
                     </div>
                   )}
 
-                  <div class="tooltip" aria-hidden data-tooltip-id="tooltip" data-tooltip-content={`Platform: ${u.platform?.toUpperCase()}`}>
-                      {u.platform === 'pc' && <MonitorIcon className='text-blue-400' />}
-                      {u.platform === 'android' && <AndroidIcon className='text-green-400' />}
-                      {u.platform === 'ios' && <AppleIcon />}
+                  <div data-tooltip-id="tooltip" data-tooltip-content={`Platform: ${u.platform?.toUpperCase()}`}>
+                      {u.platform === 'pc' && <MonitorIcon className='text-blue-400 w-5 h-5' />}
+                      {u.platform === 'android' && <AndroidIcon className='text-green-400 w-5 h-5' />}
+                      {u.platform === 'ios' && <AppleIcon className='w-5 h-5' />}
                       {u.platform === null && <span class="text-xs text-gray-400"><HelpOutlineIcon /></span>}
-                      <div class="tooltip-tip">Platform: {u.platform?.toUpperCase()}</div>
                   </div>
                   </div>
                 </td>

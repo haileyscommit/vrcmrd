@@ -1,9 +1,11 @@
 import { Advisory } from "@app/bindings/Advisory";
-import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
 import { invoke } from "@tauri-apps/api/core";
 import CloseIcon from "mdi-preact/CloseIcon";
 import DeleteIcon from "mdi-preact/DeleteIcon";
-import DownArrowIcon from "mdi-preact/MenuDownIcon";
+import AlertIcon from "mdi-preact/AlertOutlineIcon";
+import InfoIcon from "mdi-preact/InformationOutlineIcon";
+import ErrorIcon from "mdi-preact/AlertIcon";
+import StopIcon from "mdi-preact/AlertOctagonIcon";
 import { useState } from "preact/compat";
 import ConditionEditor, { NestedConditionTypes } from "./condition";
 import Dropdown from "../components/Dropdown";
@@ -55,35 +57,13 @@ export default function AdvisoryEditor({ advisory, isNew, setOverlay, setDialog 
       <ConditionEditor condition={condition} setCondition={setCondition} />
       <div class="my-4 relative">
         <label class="block mb-2 font-bold" for="advisory-level-input">Advisory Level:</label>
-        <Menu>
-          <MenuButton id="advisory-level-input" class="w-full p-2 border border-gray-300 dark:border-gray-700 rounded text-left flex justify-between items-center">
-            {level as any === 0 && "None"}
-            {level as any === 1 && "Low"}
-            {level as any === 2 && "Medium"}
-            {level as any === 3 && "High"}
-            {level as any === 4 && "Maximum"}
-            <DownArrowIcon />
-          </MenuButton>
-          <MenuItems class="my-1 w-full px-4 absolute">
-            <div class="z-55 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded shadow-lg p-2 space-y-2 overflow-y-auto max-h-60 text-black dark:text-white">
-              <MenuItem>
-                <button class={`w-full text-left p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg ${level === 0 as any && "bg-gray-100 dark:bg-gray-700"}`} onClick={() => setLevel(0 as any)}>None<br /><span class="text-sm text-black/70 dark:text-white/70">To add icons and call-outs for moderators or VIPs. Users with advisories at this level are not prioritized in the list.</span></button>
-              </MenuItem>
-              <MenuItem>
-                <button class={`w-full text-left p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg ${level === 1 as any && "bg-gray-100 dark:bg-gray-700"}`} onClick={() => setLevel(1 as any)}>Low<br /><span class="text-sm text-black/70 dark:text-white/70">For users who are slightly more likely to cause problems (i.e. new users)</span></button>
-              </MenuItem>
-              <MenuItem>
-                <button class={`w-full text-left p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg ${level === 2 as any && "bg-gray-100 dark:bg-gray-700"}`} onClick={() => setLevel(2 as any)}>Medium<br /><span class="text-sm text-black/70 dark:text-white/70">Likely to need action or attention (i.e. an unusual log event)</span></button>
-              </MenuItem>
-              <MenuItem>
-                <button class={`w-full text-left p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg ${level === 3 as any && "bg-gray-100 dark:bg-gray-700"}`} onClick={() => setLevel(3 as any)}>High<br /><span class="text-sm text-black/70 dark:text-white/70">Known or likely offenders (i.e. harasser groups or Nuisance rank)</span></button>
-              </MenuItem>
-              <MenuItem>
-                <button class={`w-full text-left p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg ${level === 4 as any && "bg-gray-100 dark:bg-gray-700"}`} onClick={() => setLevel(4 as any)}>Maximum<br /><span class="text-sm text-black/70 dark:text-white/70">Known offenders (i.e. crashers). <strong>Cuts off any existing TTS notifications</strong> if TTS is on, to play this one instead.</span></button>
-              </MenuItem>
-            </div>
-          </MenuItems>
-        </Menu>
+        <Dropdown items={[
+          { active: level as any === 0, set: () => setLevel(0 as any), label: <div class="flex flex-row justify-start gap-1 items-center"><InfoIcon class="inline-block align-middle w-4 h-4 text-blue-400" />None</div>, description: <>To add icons and call-outs for moderators or VIPs. Users with advisories at this level are not prioritized in the list.</> },
+          { active: level as any === 1, set: () => setLevel(1 as any), label: <div class="flex flex-row justify-start gap-1 items-center"><AlertIcon class="inline-block align-middle w-4 h-4 text-yellow-400" />Low</div>, description: <>For users who are slightly more likely to cause problems (i.e. new users)</> },
+          { active: level as any === 2, set: () => setLevel(2 as any), label: <div class="flex flex-row justify-start gap-1 items-center"><AlertIcon class="inline-block align-middle w-4 h-4 text-orange-400" />Medium</div>, description: <>Likely to need action or attention (i.e. an unusual log event)</> },
+          { active: level as any === 3, set: () => setLevel(3 as any), label: <div class="flex flex-row justify-start gap-1 items-center"><ErrorIcon class="inline-block align-middle w-4 h-4 text-red-400" />High</div>, description: <>Known or likely offenders (i.e. harasser groups or Nuisance rank)</> },
+          { active: level as any === 4, set: () => setLevel(4 as any), label: <div class="flex flex-row justify-start gap-1 items-center"><StopIcon class="inline-block align-middle w-4 h-4 text-red-400" />Maximum</div>, description: <>Known offenders (i.e. crashers). <strong>Cuts off any existing TTS notifications</strong> if TTS is on, to play this one instead.</> },          
+        ]} />
         <p class="mb-2 text-sm text-gray-600 dark:text-gray-400">Determines the severity of the advisory. Higher levels may trigger more noticeable notifications, and they will show up higher in the list.</p>
       </div>
       <div class="my-4">

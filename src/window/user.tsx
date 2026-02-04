@@ -8,9 +8,9 @@ import { GetUserInfoResponse, User } from "../data/users";
 import { formatAccountAge } from "../components/UserTable";
 import { render } from "preact/compat";
 import * as vrc from "vrchat";
+import AlertIcon from "mdi-preact/AlertOutlineIcon";
 import InfoIcon from "mdi-preact/InformationOutlineIcon";
-import AlertIcon from "mdi-preact/AlertIcon";
-import ErrorIcon from "mdi-preact/AlertCircleIcon";
+import ErrorIcon from "mdi-preact/AlertIcon";
 import StopIcon from "mdi-preact/AlertOctagonIcon";
 import { listen } from "@tauri-apps/api/event";
 

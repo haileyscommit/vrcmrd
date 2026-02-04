@@ -20,18 +20,18 @@ export default function ConditionEditor({ condition, setCondition, removeConditi
   return <div class="p-4 border border-gray-300 dark:border-gray-700 rounded">
     <Dropdown items={[
       //{active: condition.type === "None", set: () => setCondition({type: "None", data: null}), label: ConditionLabel({type: "None", data: null} as AdvisoryCondition)},
-      {active: condition.type === "AllOf", set: () => setCondition({type: "AllOf", data: []}), label: <ConditionName condition="AllOf" />},
-      {active: condition.type === "AnyOf", set: () => setCondition({type: "AnyOf", data: []}), label: <ConditionName condition="AnyOf" />},
-      {active: condition.type === "Not", set: () => setCondition({type: "Not", data: {data: {type: "AnyOf", data: []}}}), label: <ConditionName condition="Not" />},
-      {active: condition.type === "UsernameContains", set: () => setCondition({type: "UsernameContains", data: ""}), label: <ConditionName condition="UsernameContains" />},
-      {active: condition.type === "AccountAgeAtMostDays", set: () => setCondition({type: "AccountAgeAtMostDays", data: 0}), label: <ConditionName condition="AccountAgeAtMostDays" />},
-      {active: condition.type === "AvatarMayBe", set: () => setCondition({type: "AvatarMayBe", data: ""}), label: <ConditionName condition="AvatarMayBe" />},
-      {active: condition.type === "IsGroupMember", set: () => setCondition({type: "IsGroupMember", data: ""}), label: <ConditionName condition="IsGroupMember" />},
-      {active: condition.type === "AgeNotVerified", set: () => setCondition({type: "AgeNotVerified"}), label: <ConditionName condition="AgeNotVerified" />},
-      {active: condition.type === "PlatformIs", set: () => setCondition({type: "PlatformIs", data: ""}), label: <ConditionName condition="PlatformIs" />},
-      {active: condition.type === "TrustRankAtMost", set: () => setCondition({type: "TrustRankAtMost", data: "Nuisance"}), label: <ConditionName condition="TrustRankAtMost" />},
-      {active: condition.type === "InstanceGroupRestricted", set: () => setCondition({type: "InstanceGroupRestricted", data: null}), label: <ConditionName condition="InstanceGroupRestricted" />},
-      {active: condition.type === "InstanceOwner", set: () => setCondition({type: "InstanceOwner", data: ""}), label: <ConditionName condition="InstanceOwner" />},
+      {active: condition.type === "AllOf", set: () => setCondition({type: "AllOf", data: []}), label: <>All of...</>, description: <>All sub-conditions must be met. (AND between each condition.)</>},
+      {active: condition.type === "AnyOf", set: () => setCondition({type: "AnyOf", data: []}), label: <>Any of...</>, description: <>At least one sub-condition must be met. (OR between each condition.)</>},
+      {active: condition.type === "Not", set: () => setCondition({type: "Not", data: {data: {type: "AnyOf", data: []}}}), label: <>Not...</>, description: <>The sub-condition must NOT be met. (Inverts the sub-condition.)</>},
+      {active: condition.type === "UsernameContains", set: () => setCondition({type: "UsernameContains", data: ""}), label: <>Username contains</>},
+      {active: condition.type === "AccountAgeAtMostDays", set: () => setCondition({type: "AccountAgeAtMostDays", data: 0}), label: <>Account age</>},
+      {active: condition.type === "AvatarMayBe", set: () => setCondition({type: "AvatarMayBe", data: ""}), label: <>Avatar</>, description: <>One of a list of possibly-equipped avatars</>},
+      {active: condition.type === "IsGroupMember", set: () => setCondition({type: "IsGroupMember", data: ""}), label: <>Is member of group</>},
+      {active: condition.type === "AgeNotVerified", set: () => setCondition({type: "AgeNotVerified"}), label: <>Not 18+ age-verified</>, description: <>Users who have not ID-verified with VRChat</>},
+      {active: condition.type === "PlatformIs", set: () => setCondition({type: "PlatformIs", data: ""}), label: <>Platform</>},
+      {active: condition.type === "TrustRankAtMost", set: () => setCondition({type: "TrustRankAtMost", data: "Nuisance"}), label: <>Max trust rank</>},
+      {active: condition.type === "InstanceGroupRestricted", set: () => setCondition({type: "InstanceGroupRestricted", data: null}), label: <>Group-only or Group+ Instance</>},
+      {active: condition.type === "InstanceOwner", set: () => setCondition({type: "InstanceOwner", data: ""}), label: <>In instance owned by</>, description: <>The owner of the instance. Either a user or a group.</>},
       // {active: condition.type === "LogLinePrefix", set: () => setCondition({type: "LogLinePrefix", data: ""}), label: <ConditionName condition="LogLinePrefix" />}
     ]} />
     {removeCondition && <button class="float-end bg-transparent hover:bg-black/20 hover:dark:bg-white/20 text-white hover:text-red-400 transition rounded-full p-2 m-2 mt-0 me-0" onClick={() => removeCondition()}><DeleteIcon /></button>}
@@ -107,41 +107,6 @@ export default function ConditionEditor({ condition, setCondition, removeConditi
   </div>;
 }
 
-function ConditionName({condition}: {condition: AdvisoryCondition | string | undefined}) {
-  condition = (typeof condition === "string" ? {type: condition, data: null} as AdvisoryCondition : condition);
-  if (!condition) {
-    return <>Select Condition Type...</>;
-  }
-  if (condition.type === "AllOf") {
-    return "All of...";
-  } else if (condition.type === "AnyOf") {
-    return "Any of...";
-  } else if (condition.type === "Not") {
-    return "Not...";
-  } else if (condition.type === "UsernameContains") {
-    return "Username contains";
-  } else if (condition.type === "AccountAgeAtMostDays") {
-    return "Account age at most";
-  } else if (condition.type === "AvatarMayBe") {
-    return <>Avatar<p class="text-sm text-gray-500">One of a list of possibly-equipped avatars</p></>;
-  } else if (condition.type === "IsGroupMember") {
-    return "Is member of group";
-  } else if (condition.type === "AgeNotVerified") {
-    return "Not 18+ age-verified";
-  } else if (condition.type === "PlatformIs") {
-    return "Platform";
-  } else if (condition.type === "TrustRankAtMost") {
-    return "Max trust rank";
-  } else if (condition.type === "InstanceGroupRestricted") {
-    return "Group-only or Group+ instance";
-  } else if (condition.type === "InstanceOwner") {
-    return "Instance owned by";
-  } else if (condition.type === "LogLinePrefix") {
-    return <>Log line has prefix<p class="text-sm text-gray-500">Mutually exclusive with most other conditions</p></>;
-  } else {
-    return condition.type;
-  }
-}
 function ConditionLabel(condition: AdvisoryCondition) {
   if (condition.type === "UsernameContains") {
     return `Contains:`;
@@ -177,4 +142,4 @@ export function NestedConditionTypes(condition: AdvisoryCondition): string[] {
     types = types.concat(NestedConditionTypes(condition.data.data));
   }
   return types;
-} 
+}
