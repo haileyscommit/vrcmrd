@@ -1,8 +1,13 @@
+use std::{rc::Rc, sync::Arc};
+
 use serde::{Deserialize, Serialize};
 use serde_repr::*;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize_repr, Deserialize_repr)]
+use crate::types::user::TrustRank;
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize_repr, Deserialize_repr, ts_rs::TS)]
 #[repr(u8)]
+#[ts(export)]
 pub enum AdvisoryLevel {
     /// If this is the highest level of advisory for a user, the user list
     /// will sort them as if they have no advisories.
@@ -33,4 +38,195 @@ pub struct ActiveAdvisory {
     /// The group ID relevant to this advisory, if any. This allows the group to be linked to
     /// in the UI.
     pub relevant_group_id: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ts_rs::TS)]
+#[ts(export)]
+pub struct Advisory {
+    pub id: String,
+    /// The name of the advisory, shown in the advisory list UI.
+    /// Does not appear in notices or when applying the advisory to a user.
+    pub name: String,
+    pub level: AdvisoryLevel,
+    /// The message template for this advisory, used to generate notices and when applying
+    /// the advisory to a user.
+    /// String substitution may be applied by the matching condition(s).
+    pub message_template: String,
+    /// The conditions under which this advisory applies to a user.
+    /// To apply multiple conditions, use [AdvisoryCondition::AllOf] or [AdvisoryCondition::AnyOf].
+    pub condition: AdvisoryCondition,
+    /// Custom tags to filter the advisory in the advisory list UI.
+    pub tags: Vec<String>,
+    pub active: bool,
+    pub created_at: String,
+    pub updated_at: String,
+    // TODO: attribution -- how to reliably identify users?
+    // For now, only the host can create advisories, but in the future,
+    // selected moderators in join-mode will be able to create 
+    // and modify advisories too (especially since the host is often
+    // a remote bot account, making it harder to access _and_ track).
+    // For now, these will always be None, which means "the host".
+    // Therefore, when multi user stuff and attribution is added,
+    // it'll default to showing every advisory as created by "the host".
+    pub created_by: Option<String>,
+    pub updated_by: Option<String>,
+    /// Whether to send a notification via XSOverlay, OVR Toolkit, or 
+    /// desktop notifications when this advisory matches.
+    /// Every matching and active advisory will generate a notice in History
+    /// and show an icon in the user list (if it's a user advisory), 
+    /// regardless of this setting.
+    pub send_notification: bool,
+    /// Whether to speak the advisory message via TTS when this advisory matches.
+    pub send_tts: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ts_rs::TS)]
+#[serde(tag = "type", content = "data")] // Best for TypeScript discriminated unions
+#[ts(export)]
+pub enum AdvisoryCondition {
+    // == User conditions ==
+    // These should be applied at join-time.
+
+    /// The user is a member of the group with the given ID (`grp_***`).
+    /// Useful to set advisories for known bad groups, or for moderators.
+    IsGroupMember(String),
+    /// The user's trust rank is lower than or equal to the given trust rank.
+    /// Useful to set advisories for visitors or nuisances.
+    TrustRankAtMost(TrustRank),
+    /// The user's account age is less than or equal to the given number of days.
+    /// Useful to set advisories for new accounts.
+    AccountAgeAtMostDays(u32),
+    //PerfRankAtMost(PerfRank),
+    /// The user's display name contains the given substring (case-insensitive).
+    /// Useful to set advisories for ban-evaders or VIPs.
+    UsernameContains(String),
+    /// The user does not have their age verified. If you're running an un-gated 18+ instance,
+    /// this will let you know who you have to manually verify.
+    AgeNotVerified,
+    /// The user is on the given platform (e.g., "standalonewindows", "android", "ios").
+    /// This matches the platform string.
+    /// We cannot currently determine whether the user is in VR or not. It's likely that the
+    /// world would have to integrate with VRCMRD to tell us that.
+    PlatformIs(String),
+
+    // == Avatar conditions ==
+    // Applied to a user when they join, or when they change avatars.
+
+    /// Whether the given avatar ID (`avtr_***`) is one that may be used by the user.
+    /// Useful to set advisories for known crasher avatars or avatars that have strong effects.
+    /// **Note:** we can't guarantee that the user is using this avatar, only that it
+    /// is one that may be used based on the limited information available.
+    AvatarMayBe(String),
+    // TODO: PerfRankAtMost(AvatarPerformance),
+
+    // == Instance conditions ==
+    // ** NOTE: these only generate notices and don't themselves apply to users! **
+
+    /// A log line contains the given prefix. You can log world events and make advisories
+    /// for them this way.
+    /// ***Note:*** any advisory which contains this condition cannot be evaluated on a user.
+    /// These advisories are checked when processing log lines for the instance. It won't apply
+    /// to any user, it will simply give the advisory as a notice, which appears in History.
+    LogLinePrefix(String),
+
+    /// The instance is hosted by a group, or a Friends(+) or Invite(+) instance.
+    /// This condition, on its own, generates no advisories, but it can generate notices.
+    /// You probably don't want to do that. Instead, combine it with [AllOf] to apply
+    /// advisories only while in a group's instance.
+    /// The String is the group ID (`grp_***`) or user ID (`usr_***`) of the instance owner.
+    InstanceOwner(String),
+
+    /// The instance is restricted to group members.
+    /// On its own, this generates no notices or advisories.
+    /// This is really only useful when combined with [AllOf] or [Not] [AnyOf].
+    /// [None] corresponds to Group+ instances, `Some(vec![])` to Group instances,
+    /// and `Some(vec![...])` to Group instances that are restricted by role
+    /// (it is a list of role IDs).
+    /// 
+    /// One example use-case is to add an advisory for Group+ instances
+    /// that the user is not a member of the group. That way, moderators can encourage
+    /// users to join the group, or 
+    /// The advisory condition could be:
+    /// ```rust
+    /// AdvisoryCondition::AllOf(vec![
+    ///     AdvisoryCondition::InstanceGroupRestricted(None),
+    ///     AdvisoryCondition::Not(Box::new(AdvisoryCondition::IsGroupMember("grp_***".to_string()))),
+    /// ])
+    /// ```
+    InstanceGroupRestricted(Option<Vec<String>>),
+    // TODO: RequestedToJoinGroup
+    //       The user has requested to join the group hosting the instance.
+    //       Usually applied when a user joins the instance while they have an outstanding join request.
+    //       That way, moderators can talk to the person who requested to join and approve/deny the request.
+    //       I'm not sure, but I think there's an in-app notification for this, but I don't know if this
+    //       works for other group admins who have that permission. If these notifications do still show up,
+    //       RequestedToJoinGroup is pretty much useless.
+
+    // == Meta-conditions ==
+    /// The condition _does not_ match.
+    /// Combine as `Not(AnyOf(...))` to form "NoneOf". Otherwise, it's best to use it with `AllOf(vec![Not(...)])`.
+    /// Can be useful to:
+    /// - Exclude group members to apply an advisory only to non-members.
+    /// - Exclude benign username patterns from a broader username match.
+    /// - Exclude age-verified users from new account advisories.
+    /// - Apply advisories to only public instances by excluding group-restricted instances.
+    Not {
+        /* IMPLEMENTATION NOTE:
+            This condition has to be a struct member (with a "condition" field) rather than a tuple member
+            (i.e., Not(Box<AdvisoryCondition>)) because otherwise, Rust's recursion limit is exceeded.
+            I'd prefer the simpler pattern, but it doesn't work in this case.
+         */ 
+        data: Box<AdvisoryCondition>
+    },
+
+    /// Any of the conditions are true.
+    AnyOf(Vec<AdvisoryCondition>),
+    /// All of the conditions are true.
+    AllOf(Vec<AdvisoryCondition>),
+    /// No conditions. Does not pass validation, so you cannot set it. Used in the UI to represent
+    /// an unset condition.
+    None,
+}
+
+impl AdvisoryCondition {
+    /// Evaluate this advisory condition using the given evaluator function.
+    /// The evaluator function should return true if the condition is met, false otherwise.
+    /// This function will recursively evaluate any meta-conditions.
+    pub fn evaluate<F>(&self, evaluator: &F) -> bool
+    where
+        F: Fn(AdvisoryCondition) -> bool,
+    {
+        match self {
+            AdvisoryCondition::Not { data } => {
+                if let AdvisoryCondition::Not { data: e } = &**data {
+                    // double negation
+                    if let AdvisoryCondition::Not { data: _ } = &**e {
+                        // triple negation!
+                        eprintln!("Recursion in advisory condition is not allowed. Returning false");
+                        return false;
+                    }
+                    return e.evaluate(evaluator);
+                }
+                !data.evaluate(evaluator)
+            }
+            AdvisoryCondition::AnyOf(conditions) => {
+                for condition in conditions {
+                    if condition.evaluate(evaluator) {
+                        return true;
+                    }
+                }
+                false
+            }
+            AdvisoryCondition::AllOf(conditions) => {
+                for condition in conditions {
+                    if !condition.evaluate(evaluator) {
+                        return false;
+                    }
+                }
+                true
+            }
+            AdvisoryCondition::None => panic!("AdvisoryCondition::None should never be evaluated"),
+            _ => evaluator(self.clone()),
+        }
+    }
 }

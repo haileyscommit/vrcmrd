@@ -1,7 +1,8 @@
 use serde::{Deserialize, Serialize};
 use vrchatapi::models::{LimitedUserInstance, User};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, PartialOrd, Eq, ts_rs::TS)]
+#[ts(export)]
 pub enum TrustRank {
     Nuisance,
     Visitor,

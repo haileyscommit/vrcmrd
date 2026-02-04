@@ -8,6 +8,7 @@ mod monitoring;
 mod types;
 mod window;
 mod settings;
+mod advisories;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
@@ -27,6 +28,7 @@ pub fn run() {
         .plugin(memory::users::user_memory_plugin())
         .plugin(memory::instance::instance_memory_plugin())
         .plugin(memory::users::avatar::avatar_memory_plugin())
+        .plugin(memory::advisories::advisory_memory_plugin())
         .plugin(api::vrchat_api_plugin())
         .invoke_handler(tauri::generate_handler![
             greet,
@@ -40,10 +42,18 @@ pub fn run() {
             memory::users::get_user_info,
             api::groups::get_all_groups,
             window::show_settings_window,
+            window::show_advisories_window,
             settings::update_config,
             settings::get_config,
             settings::secret::update_credentials,
             api::logout,
+            // Advisories CRUD
+            advisories::generate_advisory_id,
+            advisories::add_advisory,
+            advisories::get_advisories,
+            advisories::get_advisory,
+            advisories::update_advisory,
+            advisories::remove_advisory,
         ])
         .setup(|_app| {
             // let salt_path = app

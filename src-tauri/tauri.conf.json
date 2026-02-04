@@ -25,6 +25,14 @@
         "height": 400,
         "create": false,
         "url": "src/entrypoints/settings.html"
+      },
+      {
+        "label": "advisories",
+        "title": "Manage Advisories",
+        "width": 800,
+        "height": 600,
+        "create": false,
+        "url": "src/entrypoints/advisories.html"
       }
     ],
     "security": {

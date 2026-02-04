@@ -81,7 +81,7 @@ pub fn query_instance_info(app: AppHandle, instance_id: &VrcMrdInstanceId) {
                                     // TODO: use the "system_probable_troll" field to add an advisory
                                     println!("Updating user {} in user list based on instance info", &member.id);
                                     handled.push(member.id.clone());
-                                    let updated_user = user.update_from(&CommonUser::from(member.clone()));
+                                    let updated_user = user.update_from(handle.clone(), &CommonUser::from(member.clone()), Vec::new());
                                     *user = updated_user.clone();
                                     break; // from inner loop
                                 }

@@ -3,6 +3,7 @@
 @tailwind utilities;
 @import "tailwindcss";
 @import "overlayscrollbars/overlayscrollbars.css";
+@import "react-tooltip/dist/react-tooltip.css";
 
 /* Dense table styles */
 :root {

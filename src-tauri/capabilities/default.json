@@ -5,7 +5,8 @@
   "windows": [
     "main",
     "settings",
-    "user_details_*"
+    "user_details_*",
+    "advisories"
   ],
   "permissions": [
     "core:default",

@@ -12,6 +12,7 @@ import { useEffect, useState } from 'preact/hooks';
 import { listen } from '@tauri-apps/api/event';
 import { menu } from '@tauri-apps/api';
 import { invoke } from '@tauri-apps/api/core';
+import { Tooltip } from 'react-tooltip';
 
 export default function UserTable() {
   const [userList, setUserListImpl] = useState<User[]>([]);
@@ -162,7 +163,7 @@ export default function UserTable() {
                   <div class="text-xs text-gray-500 max-w-[24ch]">{u.avatarName}</div>
                 </td>
                 <td class="px-2 align-middle font-semibold">
-                  <div class="tooltip" aria-hidden>
+                  <div class="tooltip" aria-hidden data-tooltip-id="tooltip" data-tooltip-content={u.perfRank}>
                     {u.perfRank ? <img src={{
                       "Excellent": "/assets/perf/excellent.png",
                       "Good": "/assets/perf/good.png",
@@ -179,7 +180,7 @@ export default function UserTable() {
                 <td class="px-2 py-1 align-middle overflow-hidden flex-grow">
                   <div class="flex items-center justify-end gap-2">
                   {u.advisories.length > 0 && (
-                    <div class="tooltip left" aria-hidden>
+                    <div class="tooltip left" aria-hidden data-tooltip-id="tooltip" data-tooltip-content={`${u.advisories.length} advisories`}>
                       { /* TODO: change color/icon for highest level advisory */ }
                       {{
                         0: <InfoIcon class="w-4 h-4 text-black dark:text-white" />,
@@ -202,7 +203,7 @@ export default function UserTable() {
                   )} */}
 
                   {u.trustRank && (
-                    <div class="tooltip" aria-hidden>
+                    <div class="tooltip" aria-hidden data-tooltip-id="tooltip" data-tooltip-content={trustRankLabel(u.trustRank, u.ageVerified)}>
                       {/* TODO: hide Nuisance and turn it into an advisory, or use a different icon */}
                       <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" class={"w-4 h-4" + {
                           "Nuisance": " text-gray-400",
@@ -219,7 +220,7 @@ export default function UserTable() {
                     </div>
                   )}
 
-                  <div class="tooltip" aria-hidden>
+                  <div class="tooltip" aria-hidden data-tooltip-id="tooltip" data-tooltip-content={`Platform: ${u.platform?.toUpperCase()}`}>
                       {u.platform === 'pc' && <MonitorIcon className='text-blue-400' />}
                       {u.platform === 'android' && <AndroidIcon className='text-green-400' />}
                       {u.platform === 'ios' && <AppleIcon />}
@@ -233,6 +234,7 @@ export default function UserTable() {
             </tbody>
         </table>
       </div>
+      <Tooltip id="tooltip" />
     </div>
   );
 }

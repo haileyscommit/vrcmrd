@@ -9,7 +9,9 @@ export default function Menubar() {
       /* refresh caches logic */
     }} />
     <MenubarButton label="Manage access" onClick={() => { /* manage users logic */ }} />
-    <MenubarButton label="Manage advisories" onClick={() => { /* manage watched groups/users logic */ }} />
+    <MenubarButton label="Manage advisories" onClick={() => { 
+      invoke('show_advisories_window');
+    }} />
     <MenubarButton label="Settings" onClick={() => { 
       invoke('show_settings_window');
     }} />
