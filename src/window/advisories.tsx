@@ -1,5 +1,5 @@
 import "../index.css";
-import { useState } from "preact/hooks";
+import { useEffect, useState } from "preact/hooks";
 import { useOverlayScrollbars } from "../components/OverlayScrollbarsHook";
 import { render } from "preact";
 import PlusIcon from "mdi-preact/PlusIcon";
@@ -8,11 +8,35 @@ import AdvisoryList from "../advisories/list";
 import { invoke } from "@tauri-apps/api/core";
 import defaultAdvisory from "../advisories/default";
 import AdvisoryEditor from "../advisories/editor";
+import { Advisory } from "@app/bindings/Advisory";
+import { emit, listen } from "@tauri-apps/api/event";
 
 function ManageAdvisoriesWindow() {
   useOverlayScrollbars();
   const [overlay, setOverlay] = useState<preact.VNode|null>(null);
   const [dialog, setDialog] = useState<preact.VNode|null>(null);
+  useEffect(() => {
+    emit("ready");
+    const openAdvisoryListener = listen("open-advisory", (event) => {
+      const advisoryId = event.payload as string;
+      invoke<Advisory[]>("get_advisories").then((advisories) => {
+        const advisory = advisories.find((a) => a.id === advisoryId);
+        if (advisory) {
+          setOverlay(<AdvisoryEditor isNew={false} advisory={advisory} setOverlay={setOverlay} setDialog={setDialog} />);
+        } else {
+          setDialog(<div class="bg-white dark:bg-gray-800 p-6 rounded shadow-lg">
+            <h2 class="text-xl font-bold mb-4">Advisory Not Found</h2>
+            <p>The advisory with ID "{advisoryId}" could not be found.</p>
+            <button class="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded"
+            onClick={() => setDialog(null)}>Close</button>
+          </div>);
+        }
+      });
+    });
+    return () => {
+      openAdvisoryListener.then((unlisten) => unlisten());
+    };
+  }, []);
   return <>
     <div class="h-screen w-full overflow-y-auto select-none flex bg-gray-100 text-gray-600 dark:bg-gray-900 dark:text-gray-300">
       <div class="p-6">

@@ -1,4 +1,6 @@
-use tauri::{Manager, Runtime};
+use std::str::FromStr;
+
+use tauri::{Emitter, Listener, Manager, Runtime};
 
 pub mod user;
 
@@ -37,6 +39,14 @@ pub async fn show_settings_window<R: Runtime>(app: tauri::AppHandle<R>, window: 
     show_window_by_label(app, Some(window), "settings").await
 }
 #[tauri::command]
-pub async fn show_advisories_window<R: Runtime>(app: tauri::AppHandle<R>, window: tauri::Window<R>) -> Result<(), String> {
-    show_window_by_label(app, Some(window), "advisories").await
+pub async fn show_advisories_window<R: Runtime>(app: tauri::AppHandle<R>, window: tauri::Window<R>, advisory: Option<String>) -> Result<(), String> {
+    show_window_by_label(app.clone(), Some(window), "advisories").await?;
+    let advisories_window = app.get_webview_window("advisories").ok_or("could not get advisories window")?;
+    let winclone = advisories_window.clone();
+    advisories_window.once("ready", move |_| {
+        if let Some(advisory_id) = advisory {
+            winclone.emit("open-advisory", advisory_id).unwrap();
+        }
+    });
+    Ok(())
 }
