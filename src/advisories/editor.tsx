@@ -3,7 +3,8 @@ import { invoke } from "@tauri-apps/api/core";
 import CloseIcon from "mdi-preact/CloseIcon";
 import DeleteIcon from "mdi-preact/DeleteIcon";
 import AlertIcon from "mdi-preact/AlertOutlineIcon";
-import InfoIcon from "mdi-preact/InformationOutlineIcon";
+import InfoOutlineIcon from "mdi-preact/InformationOutlineIcon";
+import InfoFilledIcon from "mdi-preact/InformationIcon";
 import ErrorIcon from "mdi-preact/AlertIcon";
 import StopIcon from "mdi-preact/AlertOctagonIcon";
 import { useState } from "preact/compat";
@@ -58,10 +59,10 @@ export default function AdvisoryEditor({ advisory, isNew, setOverlay, setDialog 
       <div class="my-4 relative">
         <label class="block mb-2 font-bold" for="advisory-level-input">Advisory Level:</label>
         <Dropdown items={[
-          { active: level as any === 0, set: () => setLevel(0 as any), label: <div class="flex flex-row justify-start gap-1 items-center"><InfoIcon class="inline-block align-middle w-4 h-4 text-blue-400" />None</div>, description: <>To add icons and call-outs for moderators or VIPs. Users with advisories at this level are not prioritized in the list.</> },
-          { active: level as any === 1, set: () => setLevel(1 as any), label: <div class="flex flex-row justify-start gap-1 items-center"><AlertIcon class="inline-block align-middle w-4 h-4 text-yellow-400" />Low</div>, description: <>For users who are slightly more likely to cause problems (i.e. new users)</> },
-          { active: level as any === 2, set: () => setLevel(2 as any), label: <div class="flex flex-row justify-start gap-1 items-center"><AlertIcon class="inline-block align-middle w-4 h-4 text-orange-400" />Medium</div>, description: <>Likely to need action or attention (i.e. an unusual log event)</> },
-          { active: level as any === 3, set: () => setLevel(3 as any), label: <div class="flex flex-row justify-start gap-1 items-center"><ErrorIcon class="inline-block align-middle w-4 h-4 text-red-400" />High</div>, description: <>Known or likely offenders (i.e. harasser groups or Nuisance rank)</> },
+          { active: level as any === 0, set: () => setLevel(0 as any), label: <div class="flex flex-row justify-start gap-1 items-center"><InfoOutlineIcon class="inline-block align-middle w-4 h-4 text-black dark:text-white" />None</div>, description: <>To add icons and call-outs for moderators or VIPs. Users with advisories at this level are not prioritized in the list.</> },
+          { active: level as any === 1, set: () => setLevel(1 as any), label: <div class="flex flex-row justify-start gap-1 items-center"><InfoFilledIcon class="inline-block align-middle w-4 h-4 text-blue-400" />Low</div>, description: <>For users who are slightly more likely to cause problems (i.e. new users)</> },
+          { active: level as any === 2, set: () => setLevel(2 as any), label: <div class="flex flex-row justify-start gap-1 items-center"><AlertIcon class="inline-block align-middle w-4 h-4 text-yellow-400" />Medium</div>, description: <>Likely to need action or attention (i.e. an unusual log event)</> },
+          { active: level as any === 3, set: () => setLevel(3 as any), label: <div class="flex flex-row justify-start gap-1 items-center"><ErrorIcon class="inline-block align-middle w-4 h-4 text-orange-400" />High</div>, description: <>Known or likely offenders (i.e. harasser groups or Nuisance rank)</> },
           { active: level as any === 4, set: () => setLevel(4 as any), label: <div class="flex flex-row justify-start gap-1 items-center"><StopIcon class="inline-block align-middle w-4 h-4 text-red-400" />Maximum</div>, description: <>Known offenders (i.e. crashers). <strong>Cuts off any existing TTS notifications</strong> if TTS is on, to play this one instead.</> },          
         ]} />
         <p class="mb-2 text-sm text-gray-600 dark:text-gray-400">Determines the severity of the advisory. Higher levels may trigger more noticeable notifications, and they will show up higher in the list.</p>

@@ -5,7 +5,8 @@ import AppleIcon from "mdi-preact/AppleIcon";
 import MonitorIcon from "mdi-preact/MonitorIcon";
 import HelpOutlineIcon from "mdi-preact/HelpCircleOutlineIcon";
 import AlertIcon from "mdi-preact/AlertOutlineIcon";
-import InfoIcon from "mdi-preact/InformationOutlineIcon";
+import InfoOutlineIcon from "mdi-preact/InformationOutlineIcon";
+import InfoFilledIcon from "mdi-preact/InformationIcon";
 import ErrorIcon from "mdi-preact/AlertIcon";
 import StopIcon from "mdi-preact/AlertOctagonIcon";
 import { useEffect, useState } from 'preact/hooks';
@@ -164,10 +165,10 @@ export default function UserTable() {
                 }}
                 >
                 <td class="px-2 py-1 align-middle overflow-hidden flex-grow">
-                  <div class="font-medium text-sm max-w-[24ch]">{u.username}</div>
+                  <div class="font-medium text-sm whitespace-nowrap max-w-[24ch]">{u.username}</div>
                 </td>
                 <td class="px-2 py-1 align-middle overflow-hidden flex-grow">
-                  <div class="text-xs text-gray-500 max-w-[24ch]">{u.avatarName}</div>
+                  <div class="text-xs text-gray-500 whitespace-nowrap  max-w-[24ch]">{u.avatarName}</div>
                 </td>
                 <td class="px-2 align-middle font-semibold">
                   <div data-tooltip-id="tooltip" data-tooltip-content={u.perfRank}>
@@ -188,10 +189,10 @@ export default function UserTable() {
                   {u.advisories.length > 0 && (
                     <div data-tooltip-id="tooltip" data-tooltip-content={`${u.advisories.length} advisor${u.advisories.length !== 1 ? 'ies' : 'y'}`}>
                       {{
-                        0: <InfoIcon class="w-5 h-5 text-black dark:text-white" />,
-                        1: <AlertIcon class="w-5 h-5 text-yellow-400" />,
-                        2: <AlertIcon class="w-5 h-5 text-orange-400" />,
-                        3: <ErrorIcon class="w-5 h-5 text-red-400" />,
+                        0: <InfoOutlineIcon class="w-5 h-5 text-black dark:text-white" />,
+                        1: <InfoFilledIcon class="w-5 h-5 text-blue-400" />,
+                        2: <AlertIcon class="w-5 h-5 text-yellow-400" />,
+                        3: <ErrorIcon class="w-5 h-5 text-orange-400" />,
                         4: <StopIcon class="w-5 h-5 text-red-400" />,
                       }[getHighestAdvisoryLevel(u.advisories) ?? 0]}
                       {/* Show advisory message if only one at highest level */}
