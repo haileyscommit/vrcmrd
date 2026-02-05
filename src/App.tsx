@@ -7,6 +7,7 @@ import { event } from "@tauri-apps/api";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 import { useOverlayScrollbars } from "./components/OverlayScrollbarsHook";
+import NoticesList from "./window/main/notices";
 
 export default function App() {
   if (import.meta.env.PROD) {
@@ -70,10 +71,7 @@ export default function App() {
             id: "events",
             label: "History",
             content: (
-              <div className="text-sm text-gray-600 dark:text-gray-300">
-                Certain logged and notifiable events will appear here, such as advisories from joining users, avatar changes, messages from the world, and more.
-                You may not have access to all event types.
-              </div>
+              <NoticesList />
             ),
           },
           { id: "blocking-mods", label: "Blocking Mods", content: <BlockingModsTable /> },

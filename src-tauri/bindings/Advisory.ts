@@ -12,6 +12,15 @@ name: string, level: AdvisoryLevel,
  * The message template for this advisory, used to generate notices and when applying
  * the advisory to a user.
  * String substitution may be applied by the matching condition(s).
+ * Known variables:
+ * - `{{:username:}}`: the user's display name.
+ * - `{{:account_age_days:}}`: the user's account age in days (with [AdvisoryCondition::AccountAgeAtMostDays]).
+ * - `{{:group_name:}}`: the name of the relevant group (with [AdvisoryCondition::IsGroupMember]). Some groups
+ * frequently change names to avoid identification. You may want to keep the original group name in the advisory.
+ * 
+ * Known patterns:
+ * - `{{:variable_name:}}`: the value of `variable_name`. TODO: what if it isn't defined?
+ * - `{{:variable_name||default_value:}}`: the value of `variable_name`, or `default_value` if it isn't defined.
  */
 message_template: string, 
 /**

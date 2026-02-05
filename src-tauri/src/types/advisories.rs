@@ -41,6 +41,43 @@ pub struct ActiveAdvisory {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ts_rs::TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct Notice {
+    /// The title of the notice. Usually "username joined" or "username changed avatars".
+    pub title: Option<String>,
+    pub message: String,
+    pub level: AdvisoryLevel,
+    pub relevant_group_id: Option<String>,
+    pub relevant_advisory_id: Option<String>,
+    pub relevant_user_id: Option<String>,
+    /// If this notice is only visible on the local machine.
+    /// This shows in the UI that "Only you can see this."
+    pub local: bool,
+    pub send_tts: bool,
+    pub send_notification: bool,
+    /// Timestamp of when the notice was created, in RFC 3339 format.
+    pub created_at: Option<String>,
+}
+
+impl Default for Notice {
+    fn default() -> Self {
+        Self {
+            title: None,
+            message: String::new(),
+            level: AdvisoryLevel::None,
+            relevant_group_id: None,
+            relevant_advisory_id: None,
+            relevant_user_id: None,
+            local: true,
+            send_tts: false,
+            send_notification: false,
+            created_at: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ts_rs::TS)]
 #[ts(export)]
 pub struct Advisory {
     pub id: String,
@@ -237,5 +274,20 @@ impl AdvisoryCondition {
             AdvisoryCondition::None => panic!("AdvisoryCondition::None should never be evaluated"),
             _ => evaluator(self.clone()),
         }
+    }
+}
+
+pub fn make_notice(advisory: &Advisory, active_advisory: &ActiveAdvisory, user_id: &str, title: Option<String>) -> Notice {
+    Notice {
+        title,
+        message: active_advisory.message.clone(),
+        level: advisory.level.clone(),
+        relevant_group_id: active_advisory.relevant_group_id.clone(),
+        relevant_advisory_id: Some(advisory.id.clone()),
+        relevant_user_id: Some(user_id.to_string()),
+        local: false,
+        send_tts: advisory.send_tts,
+        send_notification: advisory.send_notification,
+        created_at: Some(chrono::Utc::now().to_rfc3339()),
     }
 }

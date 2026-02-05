@@ -9,6 +9,7 @@ mod types;
 mod window;
 mod settings;
 mod advisories;
+mod notices;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
@@ -54,6 +55,7 @@ pub fn run() {
             advisories::get_advisory,
             advisories::update_advisory,
             advisories::remove_advisory,
+            notices::get_all_notices,
         ])
         .setup(|_app| {
             // let salt_path = app

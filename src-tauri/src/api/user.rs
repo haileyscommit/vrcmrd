@@ -4,7 +4,7 @@ use chrono::NaiveDate;
 use tauri::{AppHandle, Emitter, Manager};
 use vrchatapi::models::{LimitedUserGroups, LimitedUserInstance};
 
-use crate::{advisories::apply_templating, memory::{advisories::AdvisoryMemory, users::Users}, types::{VrcMrdUser, advisories::{ActiveAdvisory, AdvisoryCondition}, user::{CommonUser, GetTrustRank}}};
+use crate::{advisories::apply_templating, memory::{advisories::AdvisoryMemory, users::Users}, notices::publish_notice, types::{VrcMrdUser, advisories::{ActiveAdvisory, AdvisoryCondition, make_notice}, user::{CommonUser, GetTrustRank}}};
 
 /// Queries user information from the VRChat API and updates the user memory.
 pub async fn query_user_info(app: AppHandle, user_id: &str) {
@@ -201,11 +201,15 @@ pub fn with_advisories(app: AppHandle, user: CommonUser, existing_advisories: Ve
                     }
                 }
             } else {
-                advisories.push(ActiveAdvisory {
+                let active_advisory = ActiveAdvisory {
                     id: advisory.id.clone(),
                     message: apply_templating(advisory.message_template.clone().as_str(), &templates.borrow()),
                     level: advisory.level.clone(),
                     relevant_group_id: relevant_group_id.borrow().clone(),
+                };
+                advisories.push(active_advisory.clone());
+                publish_notice(app.clone(), make_notice(advisory, &active_advisory, &user.id, Some(format!("“{}” joined", user.display_name)))).unwrap_or_else(|e| {
+                    eprintln!("Failed to publish notice for advisory {}: {}", advisory.id, e);
                 });
             }
         } else {

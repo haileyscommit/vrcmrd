@@ -2,12 +2,13 @@ use std::{ops::DerefMut, sync::Mutex};
 
 use tauri::{Manager, Runtime};
 
-use crate::{advisories::ADVISORIES_CONFIG_KEY, settings::get_config, types::advisories::{Advisory, AdvisoryCondition}};
+use crate::{advisories::ADVISORIES_CONFIG_KEY, settings::get_config, types::advisories::{Advisory, AdvisoryCondition, Notice}};
 
 pub struct AdvisoryMemory {
     pub has_group_membership_advisory: bool,
     pub active_advisories: Vec<Advisory>,
     pub all_advisories: Vec<Advisory>,
+    pub notices: Vec<Notice>,
 }
 
 impl AdvisoryMemory {
@@ -16,6 +17,7 @@ impl AdvisoryMemory {
             has_group_membership_advisory: false,
             active_advisories: Vec::new(),
             all_advisories: Vec::new(),
+            notices: Vec::new(),
         }
     }
     /// Set the advisories in the struct. Automatically updates active_advisories as well.
