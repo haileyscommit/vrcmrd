@@ -114,7 +114,7 @@ macro_rules! try_request {
 
             let mut max_backoff_secs: Option<u64> = None;
             $( let max_backoff_secs = Some($max_backoff_secs); )?
-            
+
             #[allow(unused_variables)]
             let mut wait_for_api_ready: bool = false;
             $( let wait_for_api_ready = $wait_for_api_ready; )?

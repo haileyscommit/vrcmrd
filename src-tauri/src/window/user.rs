@@ -4,7 +4,7 @@ use tauri::{utils::config::WindowConfig, Manager, Runtime};
 pub async fn show_user_details<R: Runtime>(
     app: tauri::AppHandle<R>,
     app_window: tauri::Window<R>,
-    user: String
+    user: String,
 ) -> Result<(), String> {
     let window = tauri::WebviewWindowBuilder::from_config(
         app.app_handle(),

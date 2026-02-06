@@ -25,6 +25,7 @@
     "overlayscrollbars": "^2.14.0",
     "preact": "^10.28.2",
     "react-tooltip": "^5.30.0",
+    "tauri-plugin-tts-api": "^0.1.2",
     "vite-plugin-svgr": "^4.5.0"
   },
   "devDependencies": {

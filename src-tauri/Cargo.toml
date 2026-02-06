@@ -37,6 +37,7 @@ regex = "1.12.3"
 reqwest-websocket = "0.5.1"
 futures-util = "0.3.31"
 notify-rust = "4.12.0"
+tauri-plugin-tts = "0.1.2"
 
 [target.'cfg(windows)'.dependencies]
 tauri-winrt-notification = "0.7.2"

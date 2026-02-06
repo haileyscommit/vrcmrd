@@ -2,10 +2,16 @@ use std::sync::Mutex;
 
 use tauri::{AppHandle, Emitter, Manager};
 
-use crate::{
-    memory::{instance::{InstanceState, InstanceStateMutex}, users::Users}, monitoring::VrcLogEntry, try_request, types::{VrcMrdInstanceId, user::CommonUser}
-};
 use crate::api::VrchatApiStateMutex;
+use crate::{
+    memory::{
+        instance::{InstanceState, InstanceStateMutex},
+        users::Users,
+    },
+    monitoring::VrcLogEntry,
+    try_request,
+    types::{user::CommonUser, VrcMrdInstanceId},
+};
 
 pub fn handle_joined_instance(app: AppHandle, line: &VrcLogEntry) -> Result<bool, tauri::Error> {
     // Determine if this is an instance join line
@@ -64,10 +70,13 @@ pub fn query_instance_info(app: AppHandle, instance_id: &VrcMrdInstanceId) {
                     };
                     // Set window title to reflect instance name
                     let title = format!("VRCMRD - {}", name);
-                    let _ = handle.get_webview_window("main").map(|w| w.set_title(&title));
+                    let _ = handle
+                        .get_webview_window("main")
+                        .map(|w| w.set_title(&title));
                     let _ = handle.emit("vrcmrd:instance_details", instance_info.clone());
                     let mut handled: Vec<String> = vec![];
-                    handle.state::<InstanceStateMutex>().lock().unwrap().info = Some(instance_info.clone());
+                    handle.state::<InstanceStateMutex>().lock().unwrap().info =
+                        Some(instance_info.clone());
                     {
                         // Update users in list based on instance info
                         // NOTE: apparently this only works sometimes; the VRC API has conditions for when it
@@ -79,13 +88,20 @@ pub fn query_instance_info(app: AppHandle, instance_id: &VrcMrdInstanceId) {
                             for user in users_state.inner.iter_mut() {
                                 if user.id == member.clone().id {
                                     // TODO: use the "system_probable_troll" field to add an advisory
-                                    println!("Updating user {} in user list based on instance info", &member.id);
+                                    println!(
+                                        "Updating user {} in user list based on instance info",
+                                        &member.id
+                                    );
                                     handled.push(member.id.clone());
-                                    let updated_user = user.update_from(handle.clone(), &CommonUser::from(member.clone()), Vec::new());
+                                    let updated_user = user.update_from(
+                                        handle.clone(),
+                                        &CommonUser::from(member.clone()),
+                                        Vec::new(),
+                                    );
                                     *user = updated_user.clone();
                                     break; // from inner loop
                                 }
-                            };
+                            }
                         }
                         let _ = handle.emit("vrcmrd:users-updated", ());
                     }
@@ -95,7 +111,10 @@ pub fn query_instance_info(app: AppHandle, instance_id: &VrcMrdInstanceId) {
                     for user in users_state.inner.iter() {
                         if !handled.contains(&user.id) {
                             if user.trust_rank.is_none() {
-                                println!("User {} not found in instance info, updating manually", &user.id);
+                                println!(
+                                    "User {} not found in instance info, updating manually",
+                                    &user.id
+                                );
                                 // Manually query user info for users not in instance info
                                 let handle = handle.clone();
                                 let user_id = user.id.clone();
@@ -107,7 +126,10 @@ pub fn query_instance_info(app: AppHandle, instance_id: &VrcMrdInstanceId) {
                     }
                 }
                 Ok(None) => {
-                    eprintln!("API not ready, no instance info fetched for ID: {}", &instance_id.to_string());
+                    eprintln!(
+                        "API not ready, no instance info fetched for ID: {}",
+                        &instance_id.to_string()
+                    );
                 }
                 Err(e) => {
                     eprintln!("Failed to fetch instance info: {:?}", e);
@@ -115,6 +137,9 @@ pub fn query_instance_info(app: AppHandle, instance_id: &VrcMrdInstanceId) {
             };
         });
     } else {
-        eprintln!("API not ready, cannot fetch instance info for ID: {}", &instance_id.to_string());
+        eprintln!(
+            "API not ready, cannot fetch instance info for ID: {}",
+            &instance_id.to_string()
+        );
     }
 }

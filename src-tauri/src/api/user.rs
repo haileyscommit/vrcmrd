@@ -4,7 +4,16 @@ use chrono::NaiveDate;
 use tauri::{AppHandle, Emitter, Manager};
 use vrchatapi::models::{LimitedUserGroups, LimitedUserInstance};
 
-use crate::{advisories::apply_templating, memory::{advisories::AdvisoryMemory, users::Users}, notices::publish_notice, types::{VrcMrdUser, advisories::{ActiveAdvisory, AdvisoryCondition, make_notice}, user::{CommonUser, GetTrustRank}}};
+use crate::{
+    advisories::apply_templating,
+    memory::{advisories::AdvisoryMemory, users::Users},
+    notices::publish_notice,
+    types::{
+        advisories::{make_notice, ActiveAdvisory, AdvisoryCondition},
+        user::{CommonUser, GetTrustRank},
+        VrcMrdUser,
+    },
+};
 
 /// Queries user information from the VRChat API and updates the user memory.
 pub async fn query_user_info(app: AppHandle, user_id: &str) {
@@ -22,7 +31,8 @@ pub async fn query_user_info(app: AppHandle, user_id: &str) {
     println!("Fetching user info for ID: {}", user_id);
     let user = try_request!(app.clone(), |config| {
         vrchatapi::apis::users_api::get_user(config, user_id)
-    }, { wait_for_api_ready: true }).await;
+    }, { wait_for_api_ready: true })
+    .await;
     let groups = {
         let has_group_membership_advisory = {
             let advisories = app.state::<Mutex<AdvisoryMemory>>();
@@ -33,12 +43,17 @@ pub async fn query_user_info(app: AppHandle, user_id: &str) {
             println!("Fetching group list for user ID: {}", user_id);
             let group_list = try_request!(app.clone(), |config| {
                 vrchatapi::apis::users_api::get_user_groups(config, user_id)
-            }, { wait_for_api_ready: true }).await;
+            }, { wait_for_api_ready: true })
+            .await;
             match group_list {
                 Ok(Some(groups)) => {
-                    println!("Fetched group list for user ID {}: {} groups", user_id, groups.len());
+                    println!(
+                        "Fetched group list for user ID {}: {} groups",
+                        user_id,
+                        groups.len()
+                    );
                     groups
-                },
+                }
                 _ => {
                     eprintln!("Failed to fetch group list for user ID: {}", user_id);
                     Vec::new()
@@ -54,11 +69,19 @@ pub async fn query_user_info(app: AppHandle, user_id: &str) {
             println!("Received user info for {} via API", user_id);
             // TODO: use the "system_probable_troll" field to add an advisory
             let mut vrcmrd_user = base_user.unwrap();
-            let vrcmrd_user = vrcmrd_user.update_from(app.clone(), &CommonUser::from(user_info.clone()), groups.clone());
+            let vrcmrd_user = vrcmrd_user.update_from(
+                app.clone(),
+                &CommonUser::from(user_info.clone()),
+                groups.clone(),
+            );
             let users_state = app.state::<Mutex<Users>>();
             let mut users_state = users_state.lock().unwrap();
             // Update or insert user
-            if let Some(existing_user) = users_state.inner.iter_mut().find(|u| u.id == vrcmrd_user.id) {
+            if let Some(existing_user) = users_state
+                .inner
+                .iter_mut()
+                .find(|u| u.id == vrcmrd_user.id)
+            {
                 *existing_user = vrcmrd_user.clone();
             } else {
                 users_state.inner.push(vrcmrd_user.clone());
@@ -83,14 +106,25 @@ pub fn thread_query_user_info(app: AppHandle, user_id: &str) {
 }
 
 impl VrcMrdUser {
-    pub fn update_from(&mut self, app: AppHandle, other: &CommonUser, groups: Vec<LimitedUserGroups>) -> &mut Self {
+    pub fn update_from(
+        &mut self,
+        app: AppHandle,
+        other: &CommonUser,
+        groups: Vec<LimitedUserGroups>,
+    ) -> &mut Self {
         let user: LimitedUserInstance = other.into();
         self.age_verified = user.age_verified;
         if let Some(date_joined) = user.date_joined.clone() {
-            self.account_created = NaiveDate::parse_from_str(&date_joined, "%Y-%m-%d").ok().and_then(|d| d.and_hms_opt(0, 0, 0).and_then(|r| Some(r.and_utc().timestamp())));
+            self.account_created = NaiveDate::parse_from_str(&date_joined, "%Y-%m-%d")
+                .ok()
+                .and_then(|d| {
+                    d.and_hms_opt(0, 0, 0)
+                        .and_then(|r| Some(r.and_utc().timestamp()))
+                });
         }
         self.trust_rank = Some(user.trust_rank());
-        self.advisories = with_advisories(app.clone(), other.into(), self.advisories.clone(), groups);
+        self.advisories =
+            with_advisories(app.clone(), other.into(), self.advisories.clone(), groups);
         self.platform = {
             let platform = user.last_platform;
             if platform == "standalonewindows" {
@@ -107,10 +141,16 @@ impl VrcMrdUser {
     }
 }
 
-pub fn with_advisories(app: AppHandle, user: CommonUser, existing_advisories: Vec<ActiveAdvisory>, groups: Vec<LimitedUserGroups>) -> Vec<ActiveAdvisory> {
+pub fn with_advisories(
+    app: AppHandle,
+    user: CommonUser,
+    existing_advisories: Vec<ActiveAdvisory>,
+    groups: Vec<LimitedUserGroups>,
+) -> Vec<ActiveAdvisory> {
     let mut advisories = existing_advisories.clone();
     let user: LimitedUserInstance = user.into();
-    let active_advisories = app.state::<Mutex<AdvisoryMemory>>()
+    let active_advisories = app
+        .state::<Mutex<AdvisoryMemory>>()
         .lock()
         .unwrap()
         .deref()
@@ -120,20 +160,19 @@ pub fn with_advisories(app: AppHandle, user: CommonUser, existing_advisories: Ve
         // TODO: handle templating in advisory messages (pass some info up here)
         let relevant_group_id: RefCell<Option<String>> = RefCell::new(None);
         let templates = RefCell::new(HashMap::new());
-        templates.borrow_mut().insert("username", user.display_name.clone());
+        templates
+            .borrow_mut()
+            .insert("username", user.display_name.clone());
         if advisory.condition.evaluate(&|condition| match condition {
-            AdvisoryCondition::UsernameContains(string) => {
-                user.display_name.to_lowercase().contains(&string.to_lowercase())
-            },
-            AdvisoryCondition::AgeNotVerified => {
-                !user.age_verified
-            },
-            AdvisoryCondition::TrustRankAtMost(trust_rank) => {
-                user.trust_rank() <= trust_rank
-            },
+            AdvisoryCondition::UsernameContains(string) => user
+                .display_name
+                .to_lowercase()
+                .contains(&string.to_lowercase()),
+            AdvisoryCondition::AgeNotVerified => !user.age_verified,
+            AdvisoryCondition::TrustRankAtMost(trust_rank) => user.trust_rank() <= trust_rank,
             AdvisoryCondition::PlatformIs(platform) => {
                 user.last_platform.to_lowercase() == platform.to_lowercase()
-            },
+            }
             AdvisoryCondition::IsGroupMember(group_id) => {
                 if groups.is_empty() && advisories.iter().any(|a| a.id == advisory.id) {
                     // if the advisory is already active and groups are not available, assume the user is
@@ -147,27 +186,37 @@ pub fn with_advisories(app: AppHandle, user: CommonUser, existing_advisories: Ve
                         }
                         *relevant_group_id.borrow_mut() = Some(group_id.clone());
                         templates.borrow_mut().insert("group_id", group_id.clone());
-                        templates.borrow_mut().insert("group_name", group.name.clone().unwrap_or_default());
+                        templates
+                            .borrow_mut()
+                            .insert("group_name", group.name.clone().unwrap_or_default());
                         return true;
                     }
                 }
-                return false
-            },
+                return false;
+            }
             AdvisoryCondition::AccountAgeAtMostDays(days) => {
                 if let Some(date_joined) = user.date_joined.clone() {
-                    if let Ok(joined_date) = chrono::NaiveDate::parse_from_str(&date_joined, "%Y-%m-%d") {
-                        let account_age_days = (chrono::Local::now().naive_local().date() - joined_date).num_days();
+                    if let Ok(joined_date) =
+                        chrono::NaiveDate::parse_from_str(&date_joined, "%Y-%m-%d")
+                    {
+                        let account_age_days =
+                            (chrono::Local::now().naive_local().date() - joined_date).num_days();
                         // We add this template variable here because we have account_age_days here
-                        templates.borrow_mut().insert("account_age_days", account_age_days.to_string());
+                        templates
+                            .borrow_mut()
+                            .insert("account_age_days", account_age_days.to_string());
                         account_age_days <= days as i64
                     } else {
-                        eprintln!("Failed to parse date_joined for user {}: {}", user.id, date_joined);
+                        eprintln!(
+                            "Failed to parse date_joined for user {}: {}",
+                            user.id, date_joined
+                        );
                         false
                     }
                 } else {
                     advisories.iter().any(|a| a.id == advisory.id)
                 }
-            },
+            }
             AdvisoryCondition::InstanceOwner(owner_id) => {
                 let instance_state = app.state::<crate::memory::instance::InstanceStateMutex>();
                 let instance_state = instance_state.lock().unwrap();
@@ -175,7 +224,7 @@ pub fn with_advisories(app: AppHandle, user: CommonUser, existing_advisories: Ve
                     if owner == owner_id {
                         return true;
                     }
-                } 
+                }
                 if let Some(owner) = &instance_state.id_info.clone().and_then(|v| v.owner.clone()) {
                     if owner.as_str() == owner_id.as_str() {
                         return true;
@@ -184,18 +233,24 @@ pub fn with_advisories(app: AppHandle, user: CommonUser, existing_advisories: Ve
                     }
                 }
                 false
-            },
+            }
             _ => {
-                println!("Advisory condition not implemented in user advisory evaluation: {:?}", condition);
+                println!(
+                    "Advisory condition not implemented in user advisory evaluation: {:?}",
+                    condition
+                );
                 advisories.iter().any(|a| a.id == advisory.id)
                 // If the condition is not implemented, keep the existing advisory if it's already present
-            },
+            }
         }) {
             if advisories.iter().any(|a| a.id == advisory.id) {
                 // Update the existing advisory, especially if the advisory settings changed
                 for existing in advisories.iter_mut() {
                     if existing.id == advisory.id {
-                        existing.message = apply_templating(advisory.message_template.clone().as_str(), &templates.borrow());
+                        existing.message = apply_templating(
+                            advisory.message_template.clone().as_str(),
+                            &templates.borrow(),
+                        );
                         existing.level = advisory.level.clone();
                         existing.relevant_group_id = relevant_group_id.borrow().clone();
                     }
@@ -203,13 +258,28 @@ pub fn with_advisories(app: AppHandle, user: CommonUser, existing_advisories: Ve
             } else {
                 let active_advisory = ActiveAdvisory {
                     id: advisory.id.clone(),
-                    message: apply_templating(advisory.message_template.clone().as_str(), &templates.borrow()),
+                    message: apply_templating(
+                        advisory.message_template.clone().as_str(),
+                        &templates.borrow(),
+                    ),
                     level: advisory.level.clone(),
                     relevant_group_id: relevant_group_id.borrow().clone(),
                 };
                 advisories.push(active_advisory.clone());
-                publish_notice(app.clone(), make_notice(advisory, &active_advisory, &user.id, Some(format!("“{}” joined", user.display_name)))).unwrap_or_else(|e| {
-                    eprintln!("Failed to publish notice for advisory {}: {}", advisory.id, e);
+                publish_notice(
+                    app.clone(),
+                    make_notice(
+                        advisory,
+                        &active_advisory,
+                        &user.id,
+                        Some(format!("“{}” joined", user.display_name)),
+                    ),
+                )
+                .unwrap_or_else(|e| {
+                    eprintln!(
+                        "Failed to publish notice for advisory {}: {}",
+                        advisory.id, e
+                    );
                 });
             }
         } else {

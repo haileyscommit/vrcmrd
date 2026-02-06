@@ -1,9 +1,16 @@
 use tauri::{Manager, Wry};
 
-use crate::api::{VRCHAT_API_PASSWORD_CREDENTIAL_KEY, VRCHAT_API_USERNAME_CREDENTIAL_KEY, VRCHAT_AUTH_COOKIE_CREDENTIAL_KEY, VrchatApiStateMutex, initialize_api};
+use crate::api::{
+    initialize_api, VrchatApiStateMutex, VRCHAT_API_PASSWORD_CREDENTIAL_KEY,
+    VRCHAT_API_USERNAME_CREDENTIAL_KEY, VRCHAT_AUTH_COOKIE_CREDENTIAL_KEY,
+};
 
 #[tauri::command]
-pub async fn update_credentials(app: tauri::AppHandle<Wry>, username: String, password: String) -> Result<(), String> {
+pub async fn update_credentials(
+    app: tauri::AppHandle<Wry>,
+    username: String,
+    password: String,
+) -> Result<(), String> {
     let user_entry = keyring_core::Entry::new(VRCHAT_API_USERNAME_CREDENTIAL_KEY, "default");
     if let Ok(u) = user_entry {
         // Unready the API
@@ -31,14 +38,20 @@ pub async fn update_credentials(app: tauri::AppHandle<Wry>, username: String, pa
         };
         u.set_password(&username).map_err(|e| e.to_string())?;
     } else {
-        eprintln!("Failed to create username entry: {}", user_entry.err().unwrap());
+        eprintln!(
+            "Failed to create username entry: {}",
+            user_entry.err().unwrap()
+        );
         return Err("Failed to create username entry".into());
     };
     let password_entry = keyring_core::Entry::new(VRCHAT_API_PASSWORD_CREDENTIAL_KEY, "default");
     if let Ok(p) = password_entry {
         p.set_password(&password).map_err(|e| e.to_string())?;
     } else {
-        eprintln!("Failed to create password entry: {}", password_entry.err().unwrap());
+        eprintln!(
+            "Failed to create password entry: {}",
+            password_entry.err().unwrap()
+        );
         return Err("Failed to create password entry".into());
     };
     initialize_api(app.clone()).await.map_err(|_| {

@@ -1,5 +1,5 @@
-pub mod instance;
 mod avatars;
+pub mod instance;
 mod join_leave;
 mod path;
 
@@ -19,7 +19,8 @@ use std::{
 };
 
 use tauri::{
-    plugin::{Builder, TauriPlugin}, Wry,
+    plugin::{Builder, TauriPlugin},
+    Wry,
 };
 
 use crate::monitoring::path::get_monitor_path;
@@ -86,10 +87,7 @@ fn is_timestamped_line(b: &[u8]) -> bool {
 
 /// Start monitoring `path` on a background thread. Returns a receiver of events and a handle
 /// to stop the monitor. The monitor polls the file every `interval`.
-fn start_logfile_monitor(
-    path: impl Into<PathBuf>,
-    interval: Duration,
-) -> Receiver<VrcLogEntry> {
+fn start_logfile_monitor(path: impl Into<PathBuf>, interval: Duration) -> Receiver<VrcLogEntry> {
     // this is `mut` so that it can be updated if a new log file appears
     #[allow(unused_mut)]
     let mut path = path.into();

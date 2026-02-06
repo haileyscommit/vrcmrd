@@ -11,7 +11,9 @@ pub fn handle_switched_avatar(app: AppHandle, line: &VrcLogEntry) -> Result<bool
         // Extract the username and avatar name from the log line
         // Example log line:
         // [Behaviour] Switching User name to avatar Avatar name
-        let parts: Vec<&str> = message["[Behaviour] Switching ".len()..].split(" to avatar ").collect();
+        let parts: Vec<&str> = message["[Behaviour] Switching ".len()..]
+            .split(" to avatar ")
+            .collect();
         if parts.len() == 2 {
             let username = parts[0].trim().to_string();
             let avatar_name = parts[1].trim().to_string();
@@ -19,13 +21,21 @@ pub fn handle_switched_avatar(app: AppHandle, line: &VrcLogEntry) -> Result<bool
             // If user is not in user list yet, mark them as pending with this avatar name
             let users_state = app.state::<Mutex<Users>>();
             let users_state = users_state.lock().unwrap();
-            let user_exists = users_state.inner.iter().any(|user| user.username == username);
+            let user_exists = users_state
+                .inner
+                .iter()
+                .any(|user| user.username == username);
             drop(users_state); // Release the lock early
             if !user_exists {
-                println!("User '{}' not found in user list yet, marking avatar '{}' as pending", username, avatar_name);
+                println!(
+                    "User '{}' not found in user list yet, marking avatar '{}' as pending",
+                    username, avatar_name
+                );
                 let avatars_state = app.state::<crate::memory::users::avatar::AvatarsStateMutex>();
                 let mut avatars_state = avatars_state.lock().unwrap();
-                (*avatars_state).pending_avatar_names.push((username.clone(), avatar_name.clone()));
+                (*avatars_state)
+                    .pending_avatar_names
+                    .push((username.clone(), avatar_name.clone()));
             } else {
                 //println!("User '{}' found in user list, updating avatar to '{}'", username, avatar_name);
                 // Update the user's avatar name directly
@@ -40,7 +50,7 @@ pub fn handle_switched_avatar(app: AppHandle, line: &VrcLogEntry) -> Result<bool
                     }
                 }
                 drop(users_state); // Release the lock early
-                // Emit an event
+                                   // Emit an event
                 if let Some(user) = found_user {
                     app.emit("vrcmrd:update-user", user)?;
                 }

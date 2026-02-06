@@ -1,19 +1,22 @@
 use std::ops::{Deref, DerefMut};
 use std::sync::Mutex;
 
-use nid::Nanoid;
 use nid::alphabet::Base58Alphabet;
+use nid::Nanoid;
 use tauri::{Emitter, Manager, Wry};
 
 use crate::memory::advisories::AdvisoryMemory;
-use crate::types::advisories::{Advisory};
 use crate::settings::{get_config, update_config};
+use crate::types::advisories::Advisory;
 
 pub const ADVISORIES_CONFIG_KEY: &str = "my_advisories";
 
 #[tauri::command]
 pub async fn generate_advisory_id() -> String {
-    format!("vrcmrd_adv_{}", Nanoid::<12, Base58Alphabet>::new().to_string())
+    format!(
+        "vrcmrd_adv_{}",
+        Nanoid::<12, Base58Alphabet>::new().to_string()
+    )
 }
 
 #[tauri::command]
@@ -38,7 +41,8 @@ pub async fn add_advisory(app: tauri::AppHandle<Wry>, advisory: Advisory) -> Res
     }
     let adv = serde_json::to_string(&adv).map_err(|e| e.to_string())?;
     update_config(app.clone(), ADVISORIES_CONFIG_KEY.to_string(), adv).await?;
-    app.emit("vrcmrd:advisories_updated", {}).map_err(|e| e.to_string())?;
+    app.emit("vrcmrd:advisories_updated", {})
+        .map_err(|e| e.to_string())?;
     Ok(())
 }
 
@@ -63,7 +67,10 @@ pub async fn get_active_advisories(app: tauri::AppHandle<Wry>) -> Result<Vec<Adv
 }
 
 #[tauri::command]
-pub async fn get_advisory(app: tauri::AppHandle<Wry>, advisory_id: &str) -> Result<Option<Advisory>, String> {
+pub async fn get_advisory(
+    app: tauri::AppHandle<Wry>,
+    advisory_id: &str,
+) -> Result<Option<Advisory>, String> {
     // let adv = match get_config(app.clone(), ADVISORIES_CONFIG_KEY.to_string()).await? {
     //     Some(existing) => existing,
     //     None => "[]".to_string(),
@@ -72,7 +79,12 @@ pub async fn get_advisory(app: tauri::AppHandle<Wry>, advisory_id: &str) -> Resu
     // Ok(adv.into_iter().find(|a| a.id == advisory_id))
     let advisory_memory = app.state::<Mutex<AdvisoryMemory>>();
     let advisory_memory = advisory_memory.lock().unwrap();
-    Ok(advisory_memory.deref().all_advisories.iter().find(|a| a.id == advisory_id).cloned())
+    Ok(advisory_memory
+        .deref()
+        .all_advisories
+        .iter()
+        .find(|a| a.id == advisory_id)
+        .cloned())
 }
 
 #[tauri::command]
@@ -96,7 +108,8 @@ pub async fn remove_advisory(app: tauri::AppHandle<Wry>, advisory_id: &str) -> R
     }
     let adv = serde_json::to_string(&adv).map_err(|e| e.to_string())?;
     update_config(app.clone(), ADVISORIES_CONFIG_KEY.to_string(), adv).await?;
-    app.emit("vrcmrd:advisories_updated", {}).map_err(|e| e.to_string())?;
+    app.emit("vrcmrd:advisories_updated", {})
+        .map_err(|e| e.to_string())?;
     Ok(())
 }
 
@@ -121,11 +134,15 @@ pub async fn update_advisory(app: tauri::AppHandle<Wry>, advisory: Advisory) -> 
     }
     let adv = serde_json::to_string(&adv).map_err(|e| e.to_string())?;
     update_config(app.clone(), ADVISORIES_CONFIG_KEY.to_string(), adv).await?;
-    app.emit("vrcmrd:advisories_updated", {}).map_err(|e| e.to_string())?;
+    app.emit("vrcmrd:advisories_updated", {})
+        .map_err(|e| e.to_string())?;
     Ok(())
 }
 
-pub fn apply_templating(template: &str, variables: &std::collections::HashMap<&str, String>) -> String {
+pub fn apply_templating(
+    template: &str,
+    variables: &std::collections::HashMap<&str, String>,
+) -> String {
     let mut result = template.to_string();
     // {{:variable_name:}}, {{:variable_name||default_value:}}
     for cap in regex::Regex::new(r"\{\{:(?P<var>[a-zA-Z0-9_]+)(\|\|(?P<default>[^:]*))?:\}\}")

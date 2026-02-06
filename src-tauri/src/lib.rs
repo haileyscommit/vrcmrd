@@ -1,15 +1,14 @@
 #[cfg(target_os = "windows")]
 use std::collections::HashMap;
 
-
+mod advisories;
 mod api;
 mod memory;
 mod monitoring;
+mod notices;
+mod settings;
 mod types;
 mod window;
-mod settings;
-mod advisories;
-mod notices;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
@@ -21,6 +20,7 @@ fn greet(name: &str) -> String {
 pub fn run() {
     // TODO: set the title to reflect the current instance, group, or world
     tauri::Builder::default()
+        .plugin(tauri_plugin_tts::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_prevent_default::debug())
         .plugin(tauri_plugin_dialog::init())
@@ -64,9 +64,13 @@ pub fn run() {
             //     .expect("could not resolve app local data path")
             //     .join("salt.txt");
             #[cfg(target_os = "windows")]
-            keyring_core::set_default_store(windows_native_keyring_store::Store::new_with_configuration(&HashMap::from([
-                ("prefix", "vrcmrd:".into()),
-            ])).unwrap());
+            keyring_core::set_default_store(
+                windows_native_keyring_store::Store::new_with_configuration(&HashMap::from([(
+                    "prefix",
+                    "vrcmrd:".into(),
+                )]))
+                .unwrap(),
+            );
             #[cfg(target_os = "android")]
             keyring_core::set_default_store(android_native_keyring_store::Store::new().unwrap());
             // TODO: properly configure these other platforms
@@ -83,16 +87,14 @@ pub fn run() {
         })
         .build(tauri::generate_context!())
         .expect("error while running tauri application")
-        .run_return(|_, e| {
-            match e {
-                tauri::RunEvent::ExitRequested {  .. } => {
-                    keyring_core::unset_default_store();
-                }
-                tauri::RunEvent::Exit => {
-                    keyring_core::unset_default_store();
-                }
-                _ => {}
+        .run_return(|_, e| match e {
+            tauri::RunEvent::ExitRequested { .. } => {
+                keyring_core::unset_default_store();
             }
+            tauri::RunEvent::Exit => {
+                keyring_core::unset_default_store();
+            }
+            _ => {}
         });
-        //.expect("error while running tauri application");
+    //.expect("error while running tauri application");
 }

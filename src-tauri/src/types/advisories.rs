@@ -93,7 +93,7 @@ pub struct Advisory {
     /// - `{{:account_age_days:}}`: the user's account age in days (with [AdvisoryCondition::AccountAgeAtMostDays]).
     /// - `{{:group_name:}}`: the name of the relevant group (with [AdvisoryCondition::IsGroupMember]). Some groups
     /// frequently change names to avoid identification. You may want to keep the original group name in the advisory.
-    /// 
+    ///
     /// Known patterns:
     /// - `{{:variable_name:}}`: the value of `variable_name`. TODO: what if it isn't defined?
     /// - `{{:variable_name||default_value:}}`: the value of `variable_name`, or `default_value` if it isn't defined.
@@ -108,7 +108,7 @@ pub struct Advisory {
     pub updated_at: String,
     // TODO: attribution -- how to reliably identify users?
     // For now, only the host can create advisories, but in the future,
-    // selected moderators in join-mode will be able to create 
+    // selected moderators in join-mode will be able to create
     // and modify advisories too (especially since the host is often
     // a remote bot account, making it harder to access _and_ track).
     // For now, these will always be None, which means "the host".
@@ -116,10 +116,10 @@ pub struct Advisory {
     // it'll default to showing every advisory as created by "the host".
     pub created_by: Option<String>,
     pub updated_by: Option<String>,
-    /// Whether to send a notification via XSOverlay, OVR Toolkit, or 
+    /// Whether to send a notification via XSOverlay, OVR Toolkit, or
     /// desktop notifications when this advisory matches.
     /// Every matching and active advisory will generate a notice in History
-    /// and show an icon in the user list (if it's a user advisory), 
+    /// and show an icon in the user list (if it's a user advisory),
     /// regardless of this setting.
     pub send_notification: bool,
     /// Whether to speak the advisory message via TTS when this advisory matches.
@@ -132,7 +132,6 @@ pub struct Advisory {
 pub enum AdvisoryCondition {
     // == User conditions ==
     // These should be applied at join-time.
-
     /// The user is a member of the group with the given ID (`grp_***`).
     /// Useful to set advisories for known bad groups, or for moderators.
     IsGroupMember(String),
@@ -157,7 +156,6 @@ pub enum AdvisoryCondition {
 
     // == Avatar conditions ==
     // Applied to a user when they join, or when they change avatars.
-
     /// Whether the given avatar ID (`avtr_***`) is one that may be used by the user.
     /// Useful to set advisories for known crasher avatars or avatars that have strong effects.
     /// **Note:** we can't guarantee that the user is using this avatar, only that it
@@ -167,7 +165,6 @@ pub enum AdvisoryCondition {
 
     // == Instance conditions ==
     // ** NOTE: these only generate notices and don't themselves apply to users! **
-
     /// A log line contains the given prefix. You can log world events and make advisories
     /// for them this way.
     /// ***Note:*** any advisory which contains this condition cannot be evaluated on a user.
@@ -188,10 +185,10 @@ pub enum AdvisoryCondition {
     /// [None] corresponds to Group+ instances, `Some(vec![])` to Group instances,
     /// and `Some(vec![...])` to Group instances that are restricted by role
     /// (it is a list of role IDs).
-    /// 
+    ///
     /// One example use-case is to add an advisory for Group+ instances
     /// that the user is not a member of the group. That way, moderators can encourage
-    /// users to join the group, or 
+    /// users to join the group, or
     /// The advisory condition could be:
     /// ```rust
     /// AdvisoryCondition::AllOf(vec![
@@ -218,11 +215,11 @@ pub enum AdvisoryCondition {
     /// - Apply advisories to only public instances by excluding group-restricted instances.
     Not {
         /* IMPLEMENTATION NOTE:
-            This condition has to be a struct member (with a "condition" field) rather than a tuple member
-            (i.e., Not(Box<AdvisoryCondition>)) because otherwise, Rust's recursion limit is exceeded.
-            I'd prefer the simpler pattern, but it doesn't work in this case.
-         */ 
-        data: Box<AdvisoryCondition>
+           This condition has to be a struct member (with a "condition" field) rather than a tuple member
+           (i.e., Not(Box<AdvisoryCondition>)) because otherwise, Rust's recursion limit is exceeded.
+           I'd prefer the simpler pattern, but it doesn't work in this case.
+        */
+        data: Box<AdvisoryCondition>,
     },
 
     /// Any of the conditions are true.
@@ -248,7 +245,9 @@ impl AdvisoryCondition {
                     // double negation
                     if let AdvisoryCondition::Not { data: _ } = &**e {
                         // triple negation!
-                        eprintln!("Recursion in advisory condition is not allowed. Returning false");
+                        eprintln!(
+                            "Recursion in advisory condition is not allowed. Returning false"
+                        );
                         return false;
                     }
                     return e.evaluate(evaluator);
@@ -277,7 +276,12 @@ impl AdvisoryCondition {
     }
 }
 
-pub fn make_notice(advisory: &Advisory, active_advisory: &ActiveAdvisory, user_id: &str, title: Option<String>) -> Notice {
+pub fn make_notice(
+    advisory: &Advisory,
+    active_advisory: &ActiveAdvisory,
+    user_id: &str,
+    title: Option<String>,
+) -> Notice {
     Notice {
         title,
         message: active_advisory.message.clone(),

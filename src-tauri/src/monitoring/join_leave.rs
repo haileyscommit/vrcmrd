@@ -20,12 +20,20 @@ pub fn handle_join_leave(app: AppHandle, line: &VrcLogEntry) -> Result<bool, tau
                 let player_id = rest[open + 1..close].to_string();
                 //println!("Player joined: {} ({})", player_name, player_id);
                 let avatar_name: Option<String> = {
-                    let avatars_state = app.state::<crate::memory::users::avatar::AvatarsStateMutex>();
+                    let avatars_state =
+                        app.state::<crate::memory::users::avatar::AvatarsStateMutex>();
                     let mut avatars_state = avatars_state.lock().unwrap();
                     // Check if there's a pending avatar name for this user
-                    if let Some(index) = avatars_state.pending_avatar_names.iter().position(|(username, _)| username == &player_name) {
+                    if let Some(index) = avatars_state
+                        .pending_avatar_names
+                        .iter()
+                        .position(|(username, _)| username == &player_name)
+                    {
                         let (_, avatar_name) = avatars_state.pending_avatar_names.remove(index);
-                        println!("Found pending avatar name '{}' for joining user '{}'", avatar_name, player_name);
+                        println!(
+                            "Found pending avatar name '{}' for joining user '{}'",
+                            avatar_name, player_name
+                        );
                         Some(avatar_name)
                     } else {
                         None
@@ -50,7 +58,9 @@ pub fn handle_join_leave(app: AppHandle, line: &VrcLogEntry) -> Result<bool, tau
                 state.inner.push(user.clone());
                 // TODO: figure out when the instance is "settled" and up to date, and only do this then.
                 // When the instance is "settled", the instance information contains the full user list.
-                if let Some(instance_state) = app.try_state::<crate::memory::instance::InstanceStateMutex>() {
+                if let Some(instance_state) =
+                    app.try_state::<crate::memory::instance::InstanceStateMutex>()
+                {
                     let instance_state = instance_state.lock().unwrap();
                     if instance_state.settled {
                         drop(instance_state); // Release the lock early
@@ -76,7 +86,10 @@ pub fn handle_join_leave(app: AppHandle, line: &VrcLogEntry) -> Result<bool, tau
                     user = existing_user.clone();
                 } else {
                     // If user not found, add them (this shouldn't normally happen)
-                    eprintln!("Warning: Player left who hadn't joined: '{}' ({})", player_name, player_id);
+                    eprintln!(
+                        "Warning: Player left who hadn't joined: '{}' ({})",
+                        player_name, player_id
+                    );
                     user = VrcMrdUser {
                         id: player_id,
                         username: player_name,

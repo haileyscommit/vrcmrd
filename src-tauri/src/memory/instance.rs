@@ -1,11 +1,14 @@
-use std::{ops::Deref, sync::{Arc, Mutex}};
+use std::{
+    ops::Deref,
+    sync::{Arc, Mutex},
+};
 
 use tauri::{Emitter, Listener, Manager, Runtime, Wry};
 use vrchatapi::models::Instance;
 
+use crate::monitoring::instance::query_instance_info;
 use crate::{memory::users::Users, types::VrcMrdInstanceId};
 use std::time::Duration;
-use crate::monitoring::instance::query_instance_info;
 
 #[derive(Clone, Default)]
 pub struct InstanceState {

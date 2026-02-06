@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
+pub mod advisories;
 mod instance_id;
 pub mod user;
-pub mod advisories;
 pub mod xsoverlay;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -11,9 +11,9 @@ pub struct VrcMrdUser {
     pub username: String,
     pub avatar_name: String,
     pub perf_rank: String,
-    pub account_created: Option<i64>,     // e.g. "3y"
-    pub join_time: i64,          // e.g. "13:12"
-    pub leave_time: Option<i64>, // e.g. "13:24"
+    pub account_created: Option<i64>, // e.g. "3y"
+    pub join_time: i64,               // e.g. "13:12"
+    pub leave_time: Option<i64>,      // e.g. "13:24"
     pub advisories: Vec<advisories::ActiveAdvisory>,
     pub age_verified: bool,
     pub platform: Option<String>,

@@ -3,7 +3,10 @@ use std::{ops::Deref, sync::Mutex};
 use tauri::{Manager, Runtime, Wry};
 use vrchatapi::models::LimitedUserInstance;
 
-use crate::{try_request, types::{VrcMrdUser, user::CommonUser}};
+use crate::{
+    try_request,
+    types::{user::CommonUser, VrcMrdUser},
+};
 pub mod avatar;
 
 #[derive(Default)]
@@ -51,23 +54,33 @@ pub async fn get_user_info(
 ) -> Result<GetUserInfoResponse, String> {
     let response = try_request!(app.clone(), |config| {
         vrchatapi::apis::users_api::get_user(config, user_id)
-    }, { wait_for_api_ready: true }).await;
+    }, { wait_for_api_ready: true })
+    .await;
     match response {
         Ok(Some(user_info)) => {
             let base_user = {
                 let users_state = app.state::<Mutex<Users>>();
                 let users_state = users_state.lock().unwrap();
-                users_state.inner.iter().find(|u| u.id == user_info.id).cloned()
+                users_state
+                    .inner
+                    .iter()
+                    .find(|u| u.id == user_info.id)
+                    .cloned()
             };
             let mut local_user = base_user;
             let remote_user = Some(user_info);
             {
                 let users_state = app.state::<Mutex<Users>>();
                 let mut users_state = users_state.lock().unwrap();
-                if let Some(existing_user) = users_state.inner.iter_mut().find(|u| u.id == user_id) {
+                if let Some(existing_user) = users_state.inner.iter_mut().find(|u| u.id == user_id)
+                {
                     // Update existing user
                     if let Some(ref remote) = remote_user {
-                        existing_user.update_from(app.clone(), &Into::<CommonUser>::into(remote.clone()), Vec::new());
+                        existing_user.update_from(
+                            app.clone(),
+                            &Into::<CommonUser>::into(remote.clone()),
+                            Vec::new(),
+                        );
                         local_user = Some(existing_user.clone());
                     }
                 }
@@ -77,12 +90,10 @@ pub async fn get_user_info(
                 remote: remote_user.map(CommonUser::from).map(|u| u.into()),
             })
         }
-        Ok(None) => {
-            Err(format!("User not found for ID: {}", user_id))
-        }
-        Err(e) => {
-            Err(format!("Error fetching user info for ID {}: {:?}", user_id, e))
-        }
+        Ok(None) => Err(format!("User not found for ID: {}", user_id)),
+        Err(e) => Err(format!(
+            "Error fetching user info for ID {}: {:?}",
+            user_id, e
+        )),
     }
 }
-            
