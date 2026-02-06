@@ -9,6 +9,7 @@ mod request;
 
 pub mod user;
 pub mod groups;
+pub mod xsoverlay;
 
 pub const VRCHAT_AUTH_COOKIE_CREDENTIAL_KEY: &str = "VRChatCookies";
 pub const VRCHAT_API_USERNAME_CREDENTIAL_KEY: &str = "VRC_USERNAME";

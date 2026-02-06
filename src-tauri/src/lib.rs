@@ -57,7 +57,7 @@ pub fn run() {
             advisories::remove_advisory,
             notices::get_all_notices,
         ])
-        .setup(|_app| {
+        .setup(|app| {
             // let salt_path = app
             //     .path()
             //     .app_local_data_dir()
@@ -75,6 +75,10 @@ pub fn run() {
             //#[cfg(target_os = "linux")]
             //keyring_core::set_default_store(dbus_secret_service_keyring_store::Store::new().unwrap());
             //app.handle().plugin(tauri_plugin_stronghold::Builder::with_argon2(&salt_path).build())?;
+            let appclone = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                let _ = api::xsoverlay::start_xsoverlay_socket(appclone.clone()).await;
+            });
             Ok(())
         })
         .build(tauri::generate_context!())

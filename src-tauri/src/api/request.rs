@@ -123,7 +123,11 @@ macro_rules! try_request {
             let state_lock = handle.state::<crate::api::VrchatApiStateMutex>();
             let mut state = state_lock.try_lock().ok();
 
-            if state.is_none() || (wait_for_api_ready && !(state.as_ref().unwrap().mode == crate::api::VrchatApiMode::Ready && state.as_ref().unwrap().config.is_some())) {
+            if state.is_none() && !wait_for_api_ready {
+                eprintln!("API not initialized, cannot perform request yet");
+                return Ok(None);
+            }
+            if state.is_none() || wait_for_api_ready && !(state.as_ref().unwrap().mode == crate::api::VrchatApiMode::Ready && state.as_ref().unwrap().config.is_some()) {
                 println!("Waiting for API to become ready...");
                 let mut i = 0;
                 loop {
@@ -136,12 +140,12 @@ macro_rules! try_request {
                     if i % 10 == 0 {
                         println!("...still waiting for API to become ready...");
                     }
-                    if i >= 30 {
+                    if i >= max_attempts.unwrap_or(30) {
                         eprintln!("Timed out waiting for API to become ready after 30 seconds");
                         return Ok(None);
                     }
                 }
-            } else {
+            } else if wait_for_api_ready {
                 println!("API is ready, proceeding with request...");
             }
 

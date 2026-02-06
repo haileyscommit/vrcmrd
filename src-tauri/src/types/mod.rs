@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 mod instance_id;
 pub mod user;
 pub mod advisories;
+pub mod xsoverlay;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
