@@ -17,6 +17,7 @@ import { Tooltip } from 'react-tooltip';
 
 export default function UserTable() {
   const [userList, setUserListImpl] = useState<User[]>([]);
+  const [platformVisible, setPlatformVisible] = useState(true);
   const setUserList = (f: ((prev: User[]) => User[]) | User[]) => {
     // Sort the users here, so we don't have to re-sort on every render.
     setUserListImpl(prev => (typeof f === 'function' ? f(prev) : f)
@@ -89,6 +90,17 @@ export default function UserTable() {
     const updateAllUnlisten = listen('vrcmrd:users-updated', (_) => {
       softRefreshList();
     });
+    invoke('get_config', { key: 'show_platform' }).then((value) => {
+      if (typeof value === 'string') {
+        setPlatformVisible(value === '1');
+      }
+    });
+    const configUpdateUnlisten = listen('vrcmrd:config_updated', (event) => {
+      const { key, value } = event.payload as { key: string, value: string };
+      if (key === "show_platform") {
+        setPlatformVisible(value === "1");
+      }
+    });
     const softRefreshList = () => {
       invoke<User[]>('get_users').then(fetchedUsers => {
         setUserList(fetchedUsers);
@@ -103,6 +115,7 @@ export default function UserTable() {
       updateUnlisten.then(unlisten => unlisten());
       updateAllUnlisten.then(unlisten => unlisten());
       instanceUnlisten.then(unlisten => unlisten());
+      configUpdateUnlisten.then(unlisten => unlisten());
       document.removeEventListener('vrcmrd:soft-refresh', softRefreshList);
       clearInterval(refreshListInterval);
     };
@@ -225,12 +238,12 @@ export default function UserTable() {
                     </div>
                   )}
 
-                  <div data-tooltip-id="tooltip" data-tooltip-content={`Platform: ${u.platform?.toUpperCase()}`}>
+                  {platformVisible && <div data-tooltip-id="tooltip" data-tooltip-content={`Platform: ${u.platform?.toUpperCase()}`}>
                       {u.platform === 'pc' && <MonitorIcon className='text-blue-400 w-5 h-5' />}
                       {u.platform === 'android' && <AndroidIcon className='text-green-400 w-5 h-5' />}
                       {u.platform === 'ios' && <AppleIcon className='w-5 h-5' />}
                       {u.platform === null && <span class="text-xs text-gray-400"><HelpOutlineIcon /></span>}
-                  </div>
+                  </div>}
                   </div>
                 </td>
               </tr>

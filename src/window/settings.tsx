@@ -4,6 +4,7 @@ import { useState } from "preact/hooks";
 import { useOverlayScrollbars } from "../components/OverlayScrollbarsHook";
 import SideTabs from "../components/SideTabs";
 import NetworkingSettingsPage from "./settings/networking";
+import PreferencesPage from "./settings/preferences";
 
 function Settings() {
 	useOverlayScrollbars();
@@ -13,6 +14,7 @@ function Settings() {
 		<div className="h-screen select-none flex bg-gray-100 text-gray-600 dark:bg-gray-900 dark:text-gray-300">
 			<SideTabs tabs={[
 				{ id: "networking", label: "Networking", content: <NetworkingSettingsPage loading={loading} setLoading={setLoading} /> },
+				{ id: "preferences", label: "Preferences", content: <PreferencesPage loading={loading} /> },
 				// The two below are basic placeholders for testing
 				{ id: "tab2", label: "Tab 2", content: <div className="h-full w-full flex items-center justify-center">
 							<p className="text-center text-gray-600 dark:text-gray-300">Centered content for Tab 2</p>

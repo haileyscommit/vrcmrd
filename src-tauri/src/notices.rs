@@ -1,21 +1,17 @@
 use crate::{
-    api::xsoverlay::XSOVERLAY_SOCKET,
-    memory::advisories::AdvisoryMemory,
-    types::{
+    api::xsoverlay::XSOVERLAY_SOCKET, memory::advisories::AdvisoryMemory, settings::get_config, types::{
         advisories::{AdvisoryLevel, Notice},
         xsoverlay::{XSOverlayCommand, XSOverlayNotificationObject},
-    },
+    }
 };
-use futures_util::{FutureExt, SinkExt};
-use notify_rust::{Hint, Notification};
-use regex::Split;
-use tauri_plugin_tts::{GetVoicesRequest, SpeakRequest, TtsExt};
+use futures_util::SinkExt;
+use tauri_plugin_tts::{SpeakRequest, TtsExt};
 use std::{
-    fmt::format, ops::{Deref, DerefMut}, sync::Mutex
+    ops::{Deref, DerefMut}, sync::Mutex
 };
 use tauri::{Emitter, Manager, Wry};
 #[cfg(target_os = "windows")]
-use tauri_winrt_notification::{Scenario, Toast};
+use tauri_winrt_notification::Toast;
 
 // TODO: chunk notice list, so the UI doesn't have to load them all at once when it opens the notices tab
 #[tauri::command]
@@ -41,10 +37,23 @@ pub fn publish_notice(app: tauri::AppHandle<Wry>, notice: Notice) -> Result<(), 
     app.emit("vrcmrd:notice", notice.clone())
         .map_err(|e| e.to_string())?;
     // TODO: don't spawn the send-notification task if the notification-settle hasn't been reached
+    // TODO: 1 and 2 are different in join mode: 1 shows for just the host (default), 2 shows for everyone.
+    // The UI will only expose 1 and 2 for TTS, not notifications.
+
     if notice.send_notification {
         let notice = notice.clone();
         let app = app.clone();
         tauri::async_runtime::spawn(async move {
+            let notif_preference = get_config(app.clone(), "notification_preference".to_string())
+                .await
+                .unwrap()
+                .unwrap_or("1".to_string())
+                .parse::<u8>()
+                .unwrap_or(1);
+            if notif_preference == 0 {
+                return;
+            }
+            // TODO: if notif_preference == 1 && inJoinMode { show to host only } else if notif_preference == 2 { always show me notifications }
             let mut socket_guard = XSOVERLAY_SOCKET.lock().await;
             println!("Sending XSOverlay notification");
             if socket_guard.is_some() {
@@ -111,24 +120,34 @@ pub fn publish_notice(app: tauri::AppHandle<Wry>, notice: Notice) -> Result<(), 
     }
     if notice.send_tts {
         let notice = notice.clone();
-        let tts = app.tts();
-        // let voices = tts.get_voices(GetVoicesRequest {
-        //     language: Some("en_US".to_string())
-        // }).map_err(|e| e.to_string())?;
-        // TODO: configurable voice selection
-
-        tts.speak(SpeakRequest {
-            text: format!("{}. {}.", notice.title.unwrap_or(String::new()), notice.message).to_string(),
-            voice_id: None,
-            rate: 0.9,
-            language: Some("en_US".to_string()),
-            volume: 1.0,
-            pitch: 1.0,
-            queue_mode: match notice.level {
-                AdvisoryLevel::Maximum => tauri_plugin_tts::QueueMode::Flush,
-                _ => tauri_plugin_tts::QueueMode::Add,
+        tauri::async_runtime::spawn(async move {
+            let tts_preference = get_config(app.clone(), "tts_preference".to_string())
+                .await.unwrap()
+                .unwrap_or("1".to_string())
+                .parse::<u8>()
+                .unwrap_or(1);
+            if tts_preference == 0 {
+                return;
             }
-        }).map_err(|e| e.to_string())?;
+            let tts = app.tts();
+            // let voices = tts.get_voices(GetVoicesRequest {
+            //     language: Some("en_US".to_string())
+            // }).map_err(|e| e.to_string())?;
+            // TODO: configurable voice selection
+
+            tts.speak(SpeakRequest {
+                text: format!("{}. {}.", notice.title.unwrap_or(String::new()), notice.message).to_string(),
+                voice_id: None,
+                rate: 0.9,
+                language: Some("en_US".to_string()),
+                volume: 1.0,
+                pitch: 1.0,
+                queue_mode: match notice.level {
+                    AdvisoryLevel::Maximum => tauri_plugin_tts::QueueMode::Flush,
+                    _ => tauri_plugin_tts::QueueMode::Add,
+                }
+            }).map_err(|e| e.to_string()).unwrap();
+        });
     }
     Ok(())
 }
