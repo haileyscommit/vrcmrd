@@ -12,6 +12,7 @@ pub mod avatar;
 #[derive(Default)]
 pub struct Users {
     pub inner: Vec<VrcMrdUser>,
+    pub joined_before_settled: Vec<String>,
 }
 
 pub fn user_memory_plugin<R: Runtime>() -> tauri::plugin::TauriPlugin<R> {

@@ -1,5 +1,5 @@
 use crate::{
-    api::xsoverlay::XSOVERLAY_SOCKET, memory::advisories::AdvisoryMemory, settings::get_config, types::{
+    api::xsoverlay::XSOVERLAY_SOCKET, memory::{advisories::AdvisoryMemory, instance::InstanceStateMutex}, settings::get_config, types::{
         advisories::{AdvisoryLevel, Notice},
         xsoverlay::{XSOverlayCommand, XSOverlayNotificationObject},
     }
@@ -36,11 +36,22 @@ pub fn publish_notice(app: tauri::AppHandle<Wry>, notice: Notice) -> Result<(), 
     // Emit an event so the UI can react immediately (show toast, update notice list)
     app.emit("vrcmrd:notice", notice.clone())
         .map_err(|e| e.to_string())?;
-    // TODO: don't spawn the send-notification task if the notification-settle hasn't been reached
     // TODO: 1 and 2 are different in join mode: 1 shows for just the host (default), 2 shows for everyone.
     // The UI will only expose 1 and 2 for TTS, not notifications.
+    
+    let settled_for_user = {
+        let notice = notice.clone();
+        let users_state = app.state::<Mutex<crate::memory::users::Users>>();
+        let users_state = users_state.lock().map_err(|e| e.to_string())?;
+        if notice.relevant_user_id.is_some() && users_state.joined_before_settled.contains(&notice.clone().relevant_user_id.unwrap()) {
+            println!("Skipping notification for user {} because they joined before me", notice.relevant_user_id.unwrap());
+            false
+        } else {
+            true
+        }
+    };
 
-    if notice.send_notification {
+    if notice.send_notification && settled_for_user {
         let notice = notice.clone();
         let app = app.clone();
         tauri::async_runtime::spawn(async move {
@@ -53,6 +64,7 @@ pub fn publish_notice(app: tauri::AppHandle<Wry>, notice: Notice) -> Result<(), 
             if notif_preference == 0 {
                 return;
             }
+            println!("Sending notification for notice with title: {}", notice.title.clone().unwrap_or("No title".to_string()));
             // TODO: if notif_preference == 1 && inJoinMode { show to host only } else if notif_preference == 2 { always show me notifications }
             let mut socket_guard = XSOVERLAY_SOCKET.lock().await;
             println!("Sending XSOverlay notification");
@@ -118,7 +130,7 @@ pub fn publish_notice(app: tauri::AppHandle<Wry>, notice: Notice) -> Result<(), 
             // TODO: send TTS if applicable (TTS has its own thread, so dispatch to that)
         });
     }
-    if notice.send_tts {
+    if notice.send_tts && settled_for_user {
         let notice = notice.clone();
         tauri::async_runtime::spawn(async move {
             let tts_preference = get_config(app.clone(), "tts_preference".to_string())

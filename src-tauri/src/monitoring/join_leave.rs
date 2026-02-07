@@ -65,6 +65,8 @@ pub fn handle_join_leave(app: AppHandle, line: &VrcLogEntry) -> Result<bool, tau
                     if instance_state.settled {
                         drop(instance_state); // Release the lock early
                         thread_query_user_info(app.clone(), &user.id);
+                    } else {
+                        state.joined_before_settled.push(user.id.clone());
                     }
                 }
                 return app.emit("vrcmrd:join", user).and(Ok(true));
@@ -105,7 +107,10 @@ pub fn handle_join_leave(app: AppHandle, line: &VrcLogEntry) -> Result<bool, tau
                     };
                     state.inner.push(user.clone());
                 }
-                return app.emit("vrcmrd:leave", user).and(Ok(true));
+                let result = app.emit("vrcmrd:leave", user.clone()).and(Ok(true));
+                let user_id = user.clone().id;
+                state.joined_before_settled.retain(|id| id != &user_id);
+                return result;
             }
         }
     }
