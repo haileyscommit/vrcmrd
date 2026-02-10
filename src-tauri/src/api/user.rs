@@ -30,6 +30,10 @@ pub async fn query_user_info(app: AppHandle, user_id: &str) {
         vrchatapi::apis::users_api::get_user(config, user_id)
     }, { wait_for_api_ready: true })
     .await;
+    if user.is_ok() && user.as_ref().unwrap().is_none() {
+        eprintln!("User not found in list for ID: {}", user_id);
+        return;
+    }
     let groups = {
         let has_group_membership_advisory = {
             let advisories = app.state::<Mutex<AdvisoryMemory>>();
@@ -140,6 +144,7 @@ impl VrcMrdUser {
                 None
             }
         };
+        self.groups = groups;
         self.advisories =
             self.with_advisories(app.clone());
         self

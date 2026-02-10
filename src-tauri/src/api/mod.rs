@@ -1,6 +1,8 @@
-use std::ops::Deref;
+use std::{ops::Deref, path::Path, time::Duration};
 
 use reqwest::cookie::CookieStore;
+use reqwest_middleware::ClientBuilder;
+use reqwest_drive::{CachePolicy, ThrottlePolicy, init_cache_with_throttle};
 use tauri::{async_runtime::Mutex, AppHandle, Emitter, Listener, Manager, Wry};
 use vrchatapi::{apis::configuration::Configuration, models::RegisterUserAccount200Response};
 
@@ -14,6 +16,7 @@ pub mod xsoverlay;
 pub const VRCHAT_AUTH_COOKIE_CREDENTIAL_KEY: &str = "VRChatCookies";
 pub const VRCHAT_API_USERNAME_CREDENTIAL_KEY: &str = "VRC_USERNAME";
 pub const VRCHAT_API_PASSWORD_CREDENTIAL_KEY: &str = "VRC_PASSWORD";
+pub const VRCHAT_API_USERAGENT: &str = "vrcmrd/0.1.0 vrcmrd.by.haileyscommit@fastmail.com";
 
 #[derive(Debug, Clone)]
 pub struct VrchatApiState {
@@ -102,10 +105,32 @@ pub async fn initialize_api(app: AppHandle) -> Result<(), ()> {
             return Err(());
         }
     };
-    config.client = reqwest::Client::builder()
+    let (cache, throttle) = init_cache_with_throttle(
+        &app.path().app_cache_dir()
+            .unwrap_or_else(|_| Path::new(".").to_path_buf())
+            .join("vrchat_api_cache.bin").to_path_buf(),
+        CachePolicy {
+            respect_headers: true,
+            default_ttl: Duration::from_secs(60 * 60 * 24 * 7), // a week, in seconds
+            ..Default::default()
+        },
+        ThrottlePolicy {
+            base_delay_ms: 200,
+            adaptive_jitter_ms: 100,
+            max_concurrent: 2,
+            max_retries: 3,
+        }
+    );
+
+    let client = reqwest::Client::builder()
         .cookie_provider(std::sync::Arc::clone(&cookie_jar))
-        .build()
-        .unwrap();
+        .build().unwrap();
+    let client = reqwest_middleware::ClientBuilder::new(client)
+        .with_arc(cache)
+        .with_arc(throttle)
+        .build();
+    config.client = client;
+
     let api_key_entry =
         keyring_core::Entry::new(VRCHAT_AUTH_COOKIE_CREDENTIAL_KEY, username.as_str());
     if let Err(e) = &api_key_entry {
@@ -149,7 +174,7 @@ pub async fn initialize_api(app: AppHandle) -> Result<(), ()> {
                 .unwrap_or(&"<empty>".to_string())
         );
     }
-    config.user_agent = Some("vrcmrd/0.1.0 vrcmrd.by.haileyscommit@fastmail.com".to_string());
+    config.user_agent = Some(VRCHAT_API_USERAGENT.to_string());
 
     // If there's a 2FA code, verify the session with it.
     let two_factor_code = {

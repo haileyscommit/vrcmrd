@@ -24,7 +24,7 @@ tauri-plugin-store = "2.0.0"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tauri-plugin-prevent-default = "4.0.3"
-vrchatapi = "1.20.7"
+#vrchatapi = "1.20.7"
 tauri-plugin-dialog = "2.6.0"
 chrono = "0.4.43"
 keyring-core = "0.7.2"
@@ -38,6 +38,12 @@ reqwest-websocket = "0.5.1"
 futures-util = "0.3.31"
 notify-rust = "4.12.0"
 tauri-plugin-tts = "0.1.2"
+reqwest-drive = "0.1.0-alpha.9"
+reqwest-middleware = "0.4.2"
+
+[dependencies.vrchatapi]
+git = "https://github.com/C0D3-M4513R/vrchatapi-rust.git"
+branch = "feature/request-middleware"
 
 [target.'cfg(windows)'.dependencies]
 tauri-winrt-notification = "0.7.2"
