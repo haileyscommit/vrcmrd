@@ -12,6 +12,8 @@ export default function ConditionEditor({ condition, setCondition, removeConditi
 }) {
   const stringDataConditionTypes = [
     "UsernameContains",
+    "InGroupNameContains",
+    "AvatarNameContains",
     "AvatarMayBe",
     "IsGroupMember",
     "InstanceOwner",
@@ -26,11 +28,13 @@ export default function ConditionEditor({ condition, setCondition, removeConditi
       {active: condition.type === "UsernameContains", set: () => setCondition({type: "UsernameContains", data: ""}), label: <>Username contains</>},
       {active: condition.type === "AccountAgeAtMostDays", set: () => setCondition({type: "AccountAgeAtMostDays", data: 0}), label: <>Account age</>},
       {active: condition.type === "AvatarMayBe", set: () => setCondition({type: "AvatarMayBe", data: ""}), label: <>Avatar</>, description: <>One of a list of possibly-equipped avatars</>},
+      {active: condition.type === "AvatarNameContains", set: () => setCondition({type: "AvatarNameContains", data: ""}), label: <>Avatar name contains</>, description: <>Useful to find types of avatar that are commonly used by trolls</>},
       {active: condition.type === "IsGroupMember", set: () => setCondition({type: "IsGroupMember", data: ""}), label: <>Is member of group</>},
       {active: condition.type === "AgeNotVerified", set: () => setCondition({type: "AgeNotVerified"}), label: <>Not 18+ age-verified</>, description: <>Users who have not ID-verified with VRChat</>},
       {active: condition.type === "PlatformIs", set: () => setCondition({type: "PlatformIs", data: ""}), label: <>Platform</>},
       {active: condition.type === "TrustRankAtMost", set: () => setCondition({type: "TrustRankAtMost", data: "Nuisance"}), label: <>Max trust rank</>},
       {active: condition.type === "InstanceGroupRestricted", set: () => setCondition({type: "InstanceGroupRestricted", data: null}), label: <>Group-only or Group+ Instance</>},
+      {active: condition.type === "InGroupNameContains", set: () => setCondition({type: "InGroupNameContains", data: ""}), label: <>In group name contains</>, description: <>Users who are in a group with a name containing this string. Useful to discover crasher groups.</>},
       {active: condition.type === "InstanceOwner", set: () => setCondition({type: "InstanceOwner", data: ""}), label: <>In instance owned by</>, description: <>The owner of the instance. Either a user or a group.</>},
       // {active: condition.type === "LogLinePrefix", set: () => setCondition({type: "LogLinePrefix", data: ""}), label: <ConditionName condition="LogLinePrefix" />}
     ]} />
@@ -108,7 +112,7 @@ export default function ConditionEditor({ condition, setCondition, removeConditi
 }
 
 function ConditionLabel(condition: AdvisoryCondition) {
-  if (condition.type === "UsernameContains") {
+  if (condition.type === "UsernameContains" || condition.type === "InGroupNameContains" || condition.type === "AvatarNameContains") {
     return `Contains:`;
   } else if (condition.type === "AccountAgeAtMostDays") {
     return `Age (days):`;

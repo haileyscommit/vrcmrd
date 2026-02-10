@@ -17,7 +17,7 @@ name: string, level: AdvisoryLevel,
  * - `{{:account_age_days:}}`: the user's account age in days (with [AdvisoryCondition::AccountAgeAtMostDays]).
  * - `{{:group_name:}}`: the name of the relevant group (with [AdvisoryCondition::IsGroupMember]). Some groups
  * frequently change names to avoid identification. You may want to keep the original group name in the advisory.
- * 
+ *
  * Known patterns:
  * - `{{:variable_name:}}`: the value of `variable_name`. TODO: what if it isn't defined?
  * - `{{:variable_name||default_value:}}`: the value of `variable_name`, or `default_value` if it isn't defined.
@@ -33,10 +33,10 @@ condition: AdvisoryCondition,
  */
 tags: Array<string>, active: boolean, created_at: string, updated_at: string, created_by: string | null, updated_by: string | null, 
 /**
- * Whether to send a notification via XSOverlay, OVR Toolkit, or 
+ * Whether to send a notification via XSOverlay, OVR Toolkit, or
  * desktop notifications when this advisory matches.
  * Every matching and active advisory will generate a notice in History
- * and show an icon in the user list (if it's a user advisory), 
+ * and show an icon in the user list (if it's a user advisory),
  * regardless of this setting.
  */
 send_notification: boolean, 

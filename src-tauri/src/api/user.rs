@@ -114,6 +114,11 @@ pub fn thread_query_user_info(app: AppHandle, user_id: &str) {
     });
 }
 
+pub enum AdvisoryTrigger {
+    JoinLeave,
+    AvatarSwitched,
+}
+
 impl VrcMrdUser {
     pub fn update_from(
         &mut self,
@@ -146,12 +151,13 @@ impl VrcMrdUser {
         };
         self.groups = groups;
         self.advisories =
-            self.with_advisories(app.clone());
+            self.with_advisories(app.clone(), AdvisoryTrigger::JoinLeave);
         self
     }
     pub fn with_advisories(
         &self,
         app: AppHandle,
+        trigger: AdvisoryTrigger,
     ) -> Vec<ActiveAdvisory> {
         let mut advisories = self.advisories.clone();
         //let user: LimitedUserInstance = user.into();
@@ -238,6 +244,15 @@ impl VrcMrdUser {
                     }
                     false
                 }
+                AdvisoryCondition::AvatarNameContains(needle) => self.avatar_name.to_lowercase().contains(&needle.to_lowercase()),
+                AdvisoryCondition::InGroupNameContains(needle) => {
+                    let group = self.groups.iter().find(|g| g.name.to_lowercase().contains(&needle.to_lowercase()));
+                    if let Some(group) = group {
+                        templates.borrow_mut().insert("group_name", group.name.clone());
+                        return true;
+                    }
+                    false
+                }
                 _ => {
                     println!(
                         "Advisory condition not implemented in user advisory evaluation: {:?}",
@@ -276,7 +291,11 @@ impl VrcMrdUser {
                             advisory,
                             &active_advisory,
                                 &self.id,
-                                Some(format!("“{}” joined", self.username)),
+                                Some(match trigger {
+                                    AdvisoryTrigger::JoinLeave => format!("“{}” joined", self.username),
+                                    //AdvisoryTrigger::UserInfoUpdated => format!("User info updated for “{}”", self.username),
+                                    AdvisoryTrigger::AvatarSwitched => format!("“{}” changed to avatar “{}”", self.username, self.avatar_name),
+                                }),
                         ),
                     )
                     .unwrap_or_else(|e| {

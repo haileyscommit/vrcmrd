@@ -1,7 +1,6 @@
 use std::{ops::Deref, path::Path, time::Duration};
 
 use reqwest::cookie::CookieStore;
-use reqwest_middleware::ClientBuilder;
 use reqwest_drive::{CachePolicy, ThrottlePolicy, init_cache_with_throttle};
 use tauri::{async_runtime::Mutex, AppHandle, Emitter, Listener, Manager, Wry};
 use vrchatapi::{apis::configuration::Configuration, models::RegisterUserAccount200Response};

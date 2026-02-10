@@ -135,6 +135,9 @@ pub enum AdvisoryCondition {
     /// The user is a member of the group with the given ID (`grp_***`).
     /// Useful to set advisories for known bad groups, or for moderators.
     IsGroupMember(String),
+    /// The user is in a group whose name contains the given substring (case-insensitive).
+    /// Use this to warn of harmful groups that you might not yet know about.
+    InGroupNameContains(String),
     /// The user's trust rank is lower than or equal to the given trust rank.
     /// Useful to set advisories for visitors or nuisances.
     TrustRankAtMost(TrustRank),
@@ -162,6 +165,8 @@ pub enum AdvisoryCondition {
     /// is one that may be used based on the limited information available.
     AvatarMayBe(String),
     // TODO: PerfRankAtMost(AvatarPerformance),
+    /// The user's current avatar's name contains the given substring (case-insensitive).
+    AvatarNameContains(String),
 
     // == Instance conditions ==
     // ** NOTE: these only generate notices and don't themselves apply to users! **

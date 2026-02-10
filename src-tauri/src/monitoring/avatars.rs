@@ -37,6 +37,7 @@ pub fn handle_switched_avatar(app: AppHandle, line: &VrcLogEntry) -> Result<bool
                     .pending_avatar_names
                     .push((username.clone(), avatar_name.clone()));
             } else {
+                let user_clone = app.clone();
                 //println!("User '{}' found in user list, updating avatar to '{}'", username, avatar_name);
                 // Update the user's avatar name directly
                 let users_state = app.state::<Mutex<Users>>();
@@ -45,13 +46,14 @@ pub fn handle_switched_avatar(app: AppHandle, line: &VrcLogEntry) -> Result<bool
                 for user in users_state.inner.iter_mut() {
                     if user.username == username {
                         user.avatar_name = avatar_name.clone();
+                        user.advisories = user.with_advisories(user_clone.clone(), crate::api::user::AdvisoryTrigger::AvatarSwitched);
                         found_user = Some(user.clone());
                         break;
                     }
                 }
                 drop(users_state); // Release the lock early
-                                   // Emit an event
                 if let Some(user) = found_user {
+                    // Emit an event
                     app.emit("vrcmrd:update-user", user)?;
                 }
             }
