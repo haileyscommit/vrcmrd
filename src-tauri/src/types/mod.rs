@@ -18,6 +18,14 @@ pub struct VrcMrdUser {
     pub age_verified: bool,
     pub platform: Option<String>,
     pub trust_rank: Option<user::TrustRank>,
+    pub groups: Vec<PartialGroup>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PartialGroup {
+    pub id: String,
+    pub name: String,
 }
 
 /* References:

@@ -51,6 +51,7 @@ pub fn handle_join_leave(app: AppHandle, line: &VrcLogEntry) -> Result<bool, tau
                     age_verified: false,
                     platform: None,
                     trust_rank: None,
+                    groups: vec![],
                 };
                 let state = app.state::<Mutex<Users>>();
                 let mut state = state.lock().unwrap();
@@ -104,6 +105,7 @@ pub fn handle_join_leave(app: AppHandle, line: &VrcLogEntry) -> Result<bool, tau
                         advisories: vec![], // this should contain the actual advisories
                         age_verified: false,
                         platform: None,
+                        groups: vec![],
                     };
                     state.inner.push(user.clone());
                 }
