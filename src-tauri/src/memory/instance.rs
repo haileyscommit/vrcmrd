@@ -17,6 +17,10 @@ pub struct InstanceState {
     pub id_info: Option<VrcMrdInstanceId>,
     pub info: Option<vrchatapi::models::Instance>,
     pub settled: bool,
+    /// Whether the monitor has finished reading the initial state of the file.
+    /// This prevents settling instances before we've finished loading the file, since a
+    /// log file may contain logs from multiple instances.
+    pub isCaughtUp: bool,
 }
 pub type InstanceStateMutex = Mutex<InstanceState>;
 
@@ -24,11 +28,13 @@ pub fn instance_memory_plugin() -> tauri::plugin::TauriPlugin<Wry> {
     let listener = Arc::new(Mutex::new(None::<u32>));
     let listener2 = Arc::new(Mutex::new(None::<u32>));
     let listener3 = Arc::new(Mutex::new(None::<u32>));
+    let listener4 = Arc::new(Mutex::new(None::<u32>));
     tauri::plugin::Builder::new("instance_memory")
     .setup({
         let listener = listener.clone();
         let listener2 = listener2.clone();
         let listener3 = listener3.clone();
+        let listener4 = listener4.clone();
         move |app, _api| {
             let instance_state = InstanceStateMutex::new(InstanceState::default());
             app.manage::<InstanceStateMutex>(instance_state);
@@ -47,12 +53,12 @@ pub fn instance_memory_plugin() -> tauri::plugin::TauriPlugin<Wry> {
                 *listener.lock() = Some(id);
             }
 
-            // join listener
+            // settling timer listeners (join and instance change)
             {
                 let app_clone = app.app_handle().clone();
+                static SETTLE_TX: OnceLock<Mutex<Option<std::sync::mpsc::Sender<()>>>> = OnceLock::new();
+                let tx_mutex = SETTLE_TX.get_or_init(|| Mutex::new(None));
                 let id2 = app.listen("vrcmrd:join", move |_| {
-                    static SETTLE_TX: OnceLock<Mutex<Option<std::sync::mpsc::Sender<()>>>> = OnceLock::new();
-                    let tx_mutex = SETTLE_TX.get_or_init(|| Mutex::new(None));
                     let mut guard = tx_mutex.lock();
 
                     // spawn the timer thread if not already running
@@ -62,7 +68,31 @@ pub fn instance_memory_plugin() -> tauri::plugin::TauriPlugin<Wry> {
                         *guard = Some(tx.clone());
 
                         std::thread::spawn(move || {
+                            let instance_id = {
+                                let state = app_for_thread.state::<InstanceStateMutex>();
+                                let state = state.lock();
+                                state.id.clone()
+                            };
+                            if instance_id.is_none() {
+                                println!("Not attempting to settle instance because instance ID is not available.");
+                                return;
+                            }
                             loop {
+                                let new_instance_id = {
+                                    let state = app_for_thread.state::<InstanceStateMutex>();
+                                    let state = state.lock();
+                                    state.id.clone()
+                                };
+                                if new_instance_id.is_none() {
+                                    println!("Instance ID became unavailable while waiting to settle, aborting settle process.");
+                                    break;
+                                }
+                                let new_instance_id = new_instance_id.unwrap();
+                                if new_instance_id != instance_id.clone().unwrap() {
+                                    eprintln!("Instance ID changed while waiting to settle! Not settling this instance.");
+                                    println!("Original instance ID: {}, new instance ID: {}", instance_id.clone().unwrap(), new_instance_id);
+                                    break;
+                                }
                                 match rx.recv_timeout(Duration::from_secs(1)) {
                                     Ok(_) => continue, // reset timer on each join signal
                                     Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {
@@ -72,6 +102,15 @@ pub fn instance_memory_plugin() -> tauri::plugin::TauriPlugin<Wry> {
                                         let users = users.lock();
                                         if users.inner.is_empty() {
                                             println!("Not marking instance as settled yet; user list is still empty.");
+                                            continue;
+                                        }
+                                        let is_caught_up = {
+                                            let state = app_for_thread.state::<InstanceStateMutex>();
+                                            let state = state.lock();
+                                            state.isCaughtUp
+                                        };
+                                        if !is_caught_up {
+                                            println!("Not marking instance as settled yet; still catching up on initial logs.");
                                             continue;
                                         }
                                         let _ = app_for_thread.emit("vrcmrd:settled", ());
@@ -94,6 +133,14 @@ pub fn instance_memory_plugin() -> tauri::plugin::TauriPlugin<Wry> {
                     }
                 });
                 *listener2.lock() = Some(id2);
+                let id4 = app.listen("vrcmrd:instance", move |_| {
+                    if let Some(m) = SETTLE_TX.get() {
+                        println!("Instance changed, resetting settle timer.");
+                        let mut g = m.lock();
+                        *g = None;
+                    }
+                });
+                *listener4.lock() = Some(id4);
             }
 
             // settled listener
@@ -128,6 +175,9 @@ pub fn instance_memory_plugin() -> tauri::plugin::TauriPlugin<Wry> {
             app.unlisten(listener_id);
         }
         if let Some(listener_id) = *listener3.lock() {
+            app.unlisten(listener_id);
+        }
+        if let Some(listener_id) = *listener4.lock() {
             app.unlisten(listener_id);
         }
     })

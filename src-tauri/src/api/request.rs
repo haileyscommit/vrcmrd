@@ -124,9 +124,24 @@ macro_rules! try_request {
             $( let wait_for_api_ready = $wait_for_api_ready; )?
 
             let handle: tauri::AppHandle = $handle.clone();
+            let instance_id = {
+                let state_lock = handle.state::<crate::memory::instance::InstanceStateMutex>();
+                let state = state_lock.lock();
+                state.id.clone()
+            };
             let mut waited = false;
             let mut i = 0;
             let config = loop {
+                let new_instance_id = {
+                    let state_lock = handle.state::<crate::memory::instance::InstanceStateMutex>();
+                    let state = state_lock.lock();
+                    state.id.clone()
+                };
+                if new_instance_id.is_some() && instance_id.is_some() && new_instance_id != instance_id {
+                    eprintln!("Instance ID changed while waiting for API ready! Original instance ID: {:?}, new instance ID: {:?}. Discarding response.", instance_id, new_instance_id);
+                    return Ok(None);
+                }
+                
                 let state = {
                     let state_lock = handle.state::<crate::api::VrchatApiStateMutex>();
                     state_lock
@@ -165,7 +180,18 @@ macro_rules! try_request {
             };
 
             match $f(&config).await {
-                    Ok(result) => Ok(Some(result)),
+                    Ok(result) => {
+                        let new_instance_id = {
+                            let state_lock = handle.state::<crate::memory::instance::InstanceStateMutex>();
+                            let state = state_lock.lock();
+                            state.id.clone()
+                        };
+                        if new_instance_id.is_some() && instance_id.is_some() && new_instance_id != instance_id {
+                            eprintln!("Instance ID changed while waiting for API response! Original instance ID: {:?}, new instance ID: {:?}. Discarding response.", instance_id, new_instance_id);
+                            return Ok(None);
+                        }
+                        Ok(Some(result))
+                    },
                     Err(e) => {
                         eprintln!("API request failed: {:?}", e);
                         if format!("{:?}", e).contains("429") {
@@ -173,6 +199,15 @@ macro_rules! try_request {
                             let mut attempts: u8 = 1;
                             loop {
                                 tokio::time::sleep(std::time::Duration::from_secs(secs)).await;
+                                let new_instance_id = {
+                                    let state_lock = handle.state::<crate::memory::instance::InstanceStateMutex>();
+                                    let state = state_lock.lock();
+                                    state.id.clone()
+                                };
+                                if new_instance_id.is_some() && instance_id.is_some() && new_instance_id != instance_id {
+                                    eprintln!("Instance ID changed while waiting for API ready! Original instance ID: {:?}, new instance ID: {:?}. Discarding response.", instance_id, new_instance_id);
+                                    return Ok(None);
+                                }
                                 match $f(&config).await {
                                     Ok(result) => return Ok(Some(result)),
                                     Err(e) => {

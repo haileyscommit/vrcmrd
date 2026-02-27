@@ -24,16 +24,25 @@ pub fn handle_joined_instance(app: AppHandle, line: &VrcLogEntry) -> Result<bool
         println!("Joined instance: {}", instance_id);
         let state = app.state::<Mutex<InstanceState>>();
         let mut state = state.lock();
+        state.info = None; // Clear instance info since we're in a new instance now
         state.id = Some(instance_id.to_string());
         // Parse the instance ID into its components, if possible
         let instance_id_info = VrcMrdInstanceId::from(instance_id);
         state.id_info = Some(instance_id_info.clone());
         // Mark instance as not settled
         state.settled = false;
+        // Clear the notices list, since those are instance-specific
+        {
+            let advisory_memory = app.state::<Mutex<crate::memory::advisories::AdvisoryMemory>>();
+            let mut advisory_memory = advisory_memory.lock();
+            advisory_memory.notices.clear();
+        }
         // Clear the user list when joining a new instance
-        let users_state = app.state::<Mutex<Users>>();
-        let mut users_state = users_state.lock();
-        users_state.inner.clear();
+        {
+            let users_state = app.state::<Mutex<Users>>();
+            let mut users_state = users_state.lock();
+            users_state.inner.clear();
+        }
         // Emit an event
         app.emit("vrcmrd:instance", instance_id.to_string())?;
         return Ok(true);

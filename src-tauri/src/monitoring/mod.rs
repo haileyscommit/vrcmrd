@@ -9,9 +9,7 @@ use std::{
     io::{Read, Seek},
     path::PathBuf,
     sync::{
-        atomic::{AtomicBool, Ordering},
-        mpsc::{self, Receiver},
-        Arc,
+        Arc, atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, Sender}
     },
     thread,
     time::Duration,
@@ -19,8 +17,7 @@ use std::{
 };
 
 use tauri::{
-    plugin::{Builder, TauriPlugin},
-    Wry,
+    Emitter, Manager, Wry, plugin::{Builder, TauriPlugin}
 };
 
 use crate::monitoring::path::get_monitor_path;
@@ -87,7 +84,7 @@ fn is_timestamped_line(b: &[u8]) -> bool {
 
 /// Start monitoring `path` on a background thread. Returns a receiver of events and a handle
 /// to stop the monitor. The monitor polls the file every `interval`.
-fn start_logfile_monitor(path: impl Into<PathBuf>, interval: Duration) -> Receiver<VrcLogEntry> {
+fn start_logfile_monitor(path: impl Into<PathBuf>, interval: Duration, mark_caught_up_sender: Sender<()>) -> Receiver<VrcLogEntry> {
     // this is `mut` so that it can be updated if a new log file appears
     #[allow(unused_mut)]
     let mut path = path.into();
@@ -97,6 +94,7 @@ fn start_logfile_monitor(path: impl Into<PathBuf>, interval: Duration) -> Receiv
 
     let _ = thread::spawn(move || {
         let mut last_len: u64 = 0;
+        let mut is_caught_up = false;
 
         while !thread_stop.load(Ordering::SeqCst) {
             // Check for new rotated log files in the same directory and switch to the newest.
@@ -188,6 +186,13 @@ fn start_logfile_monitor(path: impl Into<PathBuf>, interval: Duration) -> Receiv
             // Get the new length after reading
             last_len = file.metadata().map(|m| m.len()).unwrap_or(last_len);
 
+            // Mark the monitor as caught up after the first read, so that we can start settling instances and processing join/leave events.
+            if !is_caught_up {
+                is_caught_up = true;
+                let _ = mark_caught_up_sender.send(());
+                println!("Initial log read complete, monitor is now caught up.");
+            }
+
             thread::sleep(interval);
         }
 
@@ -202,30 +207,46 @@ pub fn start_monitoring_logfiles(app: tauri::AppHandle) {
     // Example usage
     let file_to_watch =
         env::var("APPDATA").unwrap_or_default() + "\\..\\LocalLow\\VRChat\\VRChat\\";
-    let rx = start_logfile_monitor(file_to_watch, Duration::from_millis(200));
+    let (mark_caught_up_tx, mark_caught_up_rx) = std::sync::mpsc::channel();
+    let rx = start_logfile_monitor(file_to_watch, Duration::from_millis(200), mark_caught_up_tx);
 
     // Spawn a thread to print events (main thread could also handle them).
+    let app_clone = app.clone();
     let _ = thread::spawn(move || {
+        let app_clone = app_clone.clone();
         println!("Monitoring VRChat logs.");
         for evt in rx {
             // println!("{:?}", evt.message);
-            match instance::handle_joined_instance(app.clone(), &evt) {
+            match instance::handle_joined_instance(app_clone.clone(), &evt) {
                 Ok(true) => continue, // handled
                 Ok(false) => {}
                 Err(e) => eprintln!("Error handling joined instance: {:?}", e),
             }
-            match avatars::handle_switched_avatar(app.clone(), &evt) {
+            match avatars::handle_switched_avatar(app_clone.clone(), &evt) {
                 Ok(true) => continue, // handled
                 Ok(false) => {}
                 Err(e) => eprintln!("Error handling switched avatar: {:?}", e),
             }
-            match join_leave::handle_join_leave(app.clone(), &evt) {
+            match join_leave::handle_join_leave(app_clone.clone(), &evt) {
                 Ok(true) => continue, // handled
                 Ok(false) => {}
                 Err(e) => eprintln!("Error handling join/leave: {:?}", e),
             }
         }
         println!("Monitor stopped and channel closed.");
+    });
+    let app_clone = app.clone();
+    let _ = thread::spawn(move || {
+        // Wait for the monitor to be caught up before emitting the "monitor_ready" event.
+        if mark_caught_up_rx.recv().is_ok() {
+            let app_clone = app_clone.clone();
+            println!("Emitting monitor_ready event.");
+            let state = app_clone.state::<crate::memory::instance::InstanceStateMutex>();
+            let mut state = state.lock();
+            state.isCaughtUp = true;
+            let _ = app_clone.emit("vrcmrd:monitor_ready", ());
+        }
+        // once it receives the monitor ready, this thread exits!
     });
 
     // Let it run for 10 seconds in this example, then stop.
