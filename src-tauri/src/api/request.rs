@@ -26,39 +26,46 @@ macro_rules! try_request {
     ($handle:expr, $f:expr $(,)?) => {{
         async {
             let initial_backoff_secs: Option<u64> = Some(5);
-            let mut secs = initial_backoff_secs.unwrap_or(5);
+            let secs = initial_backoff_secs.unwrap_or(5);
             let max_attempts: Option<u8> = Some(5);
             let max_backoff_secs: Option<u64> = Some(300);
             let wait_for_api_ready: bool = false;
 
             let handle: tauri::AppHandle = &$handle;
-            let mut state = {
-                let state_lock = handle.state::<crate::api::VrchatApiStateMutex>();
-                state_lock.lock().await
+            let mut waited = false;
+            let mut i = 0;
+            let config = loop {
+                let state_snapshot = {
+                    let state_lock = handle.state::<crate::api::VrchatApiStateMutex>();
+                    let state = state_lock.lock();
+                    (state.mode.clone(), state.config.clone())
+                };
+
+                if state_snapshot.0 == crate::api::VrchatApiMode::Ready && state_snapshot.1.is_some() {
+                    break state_snapshot.1.unwrap();
+                }
+
+                if !wait_for_api_ready {
+                    return Ok(None);
+                }
+
+                if !waited {
+                    println!("Waiting for API to become ready...");
+                    waited = true;
+                }
+
+                tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                i += 1;
+                if i % 10 == 0 {
+                    println!("...still waiting for API to become ready...");
+                }
+                if i >= 30 {
+                    eprintln!("Timed out waiting for API to become ready after 30 seconds");
+                    return Ok(None);
+                }
             };
 
-            if wait_for_api_ready {
-                println!("Waiting for API to become ready...");
-                let mut i = 0;
-                while !(state.mode == crate::api::VrchatApiMode::Ready && state.config.is_some()) {
-                    tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-                    state = {
-                        let state_lock = handle.state::<crate::api::VrchatApiStateMutex>();
-                        state_lock.lock().await
-                    };
-                    i += 1;
-                    if i % 10 == 0 {
-                        println!("...still waiting for API to become ready...");
-                    }
-                    if i >= 30 {
-                        eprintln!("Timed out waiting for API to become ready after 30 seconds");
-                        return Ok(None);
-                    }
-                }
-            }
-
-            if state.mode == crate::api::VrchatApiMode::Ready && state.config.is_some() {
-                match $f(&state.config.clone().unwrap()).await {
+            match $f(&config).await {
                     Ok(result) => Ok(Some(result)),
                     Err(e) => {
                         eprintln!("API request failed: {:?}", e);
@@ -67,7 +74,7 @@ macro_rules! try_request {
                             let mut attempts: u8 = 1;
                             loop {
                                 tokio::time::sleep(std::time::Duration::from_secs(secs)).await;
-                                match $f(&state.config.clone().unwrap()).await {
+                                match $f(&config).await {
                                     Ok(result) => return Ok(Some(result)),
                                     Err(e) => {
                                         eprintln!("API request failed after {}-second backoff: {:?}", secs, e);
@@ -95,9 +102,6 @@ macro_rules! try_request {
                         Err(e)
                     }
                 }
-            } else {
-                Ok(None)
-            }
         }
     }};
 
@@ -107,52 +111,60 @@ macro_rules! try_request {
             use tauri::{Manager};
             let initial_backoff_secs: Option<u64> = None;
             $( let initial_backoff_secs = Some($initial_backoff_secs); )?
-            let mut secs = initial_backoff_secs.unwrap_or(5);
+            let secs = initial_backoff_secs.unwrap_or(5);
 
-            let mut max_attempts: Option<u8> = None;
+            let max_attempts: Option<u8> = None;
             $( let max_attempts = Some($max_attempts); )?
 
-            let mut max_backoff_secs: Option<u64> = None;
+            let max_backoff_secs: Option<u64> = None;
             $( let max_backoff_secs = Some($max_backoff_secs); )?
 
             #[allow(unused_variables)]
-            let mut wait_for_api_ready: bool = false;
+            let wait_for_api_ready: bool = false;
             $( let wait_for_api_ready = $wait_for_api_ready; )?
 
             let handle: tauri::AppHandle = $handle.clone();
-            let state_lock = handle.state::<crate::api::VrchatApiStateMutex>();
-            let mut state = state_lock.try_lock().ok();
+            let mut waited = false;
+            let mut i = 0;
+            let config = loop {
+                let state = {
+                    let state_lock = handle.state::<crate::api::VrchatApiStateMutex>();
+                    state_lock
+                        .try_lock()
+                        .map(|state| (state.mode.clone(), state.config.clone()))
+                };
 
-            if state.is_none() && !wait_for_api_ready {
-                eprintln!("API not initialized, cannot perform request yet");
-                return Ok(None);
-            }
-            if state.is_none() || wait_for_api_ready && !(state.as_ref().unwrap().mode == crate::api::VrchatApiMode::Ready && state.as_ref().unwrap().config.is_some()) {
-                println!("Waiting for API to become ready...");
-                let mut i = 0;
-                loop {
-                    tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-                    state = state_lock.try_lock().ok();
-                    if state.is_some() && state.as_ref().unwrap().mode == crate::api::VrchatApiMode::Ready && state.as_ref().unwrap().config.is_some() {
-                        break;
-                    }
-                    i += 1;
-                    if i % 10 == 0 {
-                        println!("...still waiting for API to become ready...");
-                    }
-                    if i >= max_attempts.unwrap_or(30) {
-                        eprintln!("Timed out waiting for API to become ready after 30 seconds");
-                        return Ok(None);
+                if let Some((mode, config)) = state {
+                    if mode == crate::api::VrchatApiMode::Ready && config.is_some() {
+                        if wait_for_api_ready && waited {
+                            println!("API is ready, proceeding with request...");
+                        }
+                        break config.unwrap();
                     }
                 }
-            } else if wait_for_api_ready {
-                println!("API is ready, proceeding with request...");
-            }
 
-            let state = state.unwrap();
+                if !wait_for_api_ready {
+                    eprintln!("API not initialized, cannot perform request yet");
+                    return Ok(None);
+                }
 
-            if state.mode == crate::api::VrchatApiMode::Ready && state.config.is_some() {
-                match $f(&state.config.clone().unwrap()).await {
+                if !waited {
+                    println!("Waiting for API to become ready...");
+                    waited = true;
+                }
+
+                tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                i += 1;
+                if i % 10 == 0 {
+                    println!("...still waiting for API to become ready...");
+                }
+                if i >= max_attempts.unwrap_or(30) {
+                    eprintln!("Timed out waiting for API to become ready after 30 seconds");
+                    return Ok(None);
+                }
+            };
+
+            match $f(&config).await {
                     Ok(result) => Ok(Some(result)),
                     Err(e) => {
                         eprintln!("API request failed: {:?}", e);
@@ -161,7 +173,7 @@ macro_rules! try_request {
                             let mut attempts: u8 = 1;
                             loop {
                                 tokio::time::sleep(std::time::Duration::from_secs(secs)).await;
-                                match $f(&state.config.clone().unwrap()).await {
+                                match $f(&config).await {
                                     Ok(result) => return Ok(Some(result)),
                                     Err(e) => {
                                         eprintln!("API request failed after {}-second backoff: {:?}", secs, e);
@@ -189,9 +201,6 @@ macro_rules! try_request {
                         Err(e)
                     }
                 }
-            } else {
-                Ok(None)
-            }
         }
     }};
 }

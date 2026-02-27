@@ -1,4 +1,4 @@
-use std::sync::Mutex;
+use parking_lot::Mutex;
 
 use tauri::{AppHandle, Emitter, Manager};
 
@@ -20,7 +20,7 @@ pub fn handle_switched_avatar(app: AppHandle, line: &VrcLogEntry) -> Result<bool
             println!("User '{}' switched to avatar '{}'", username, avatar_name);
             // If user is not in user list yet, mark them as pending with this avatar name
             let users_state = app.state::<Mutex<Users>>();
-            let users_state = users_state.lock().unwrap();
+            let users_state = users_state.lock();
             let user_exists = users_state
                 .inner
                 .iter()
@@ -32,7 +32,7 @@ pub fn handle_switched_avatar(app: AppHandle, line: &VrcLogEntry) -> Result<bool
                     username, avatar_name
                 );
                 let avatars_state = app.state::<crate::memory::users::avatar::AvatarsStateMutex>();
-                let mut avatars_state = avatars_state.lock().unwrap();
+                let mut avatars_state = avatars_state.lock();
                 (*avatars_state)
                     .pending_avatar_names
                     .push((username.clone(), avatar_name.clone()));
@@ -41,7 +41,7 @@ pub fn handle_switched_avatar(app: AppHandle, line: &VrcLogEntry) -> Result<bool
                 //println!("User '{}' found in user list, updating avatar to '{}'", username, avatar_name);
                 // Update the user's avatar name directly
                 let users_state = app.state::<Mutex<Users>>();
-                let mut users_state = users_state.lock().unwrap();
+                let mut users_state = users_state.lock();
                 let mut found_user = Option::None;
                 for user in users_state.inner.iter_mut() {
                     if user.username == username {

@@ -1,4 +1,4 @@
-use std::sync::Mutex;
+use parking_lot::Mutex;
 
 use crate::api::user::thread_query_user_info;
 use crate::memory::users::Users;
@@ -22,7 +22,7 @@ pub fn handle_join_leave(app: AppHandle, line: &VrcLogEntry) -> Result<bool, tau
                 let avatar_name: Option<String> = {
                     let avatars_state =
                         app.state::<crate::memory::users::avatar::AvatarsStateMutex>();
-                    let mut avatars_state = avatars_state.lock().unwrap();
+                    let mut avatars_state = avatars_state.lock();
                     // Check if there's a pending avatar name for this user
                     if let Some(index) = avatars_state
                         .pending_avatar_names
@@ -54,7 +54,7 @@ pub fn handle_join_leave(app: AppHandle, line: &VrcLogEntry) -> Result<bool, tau
                     groups: vec![],
                 };
                 let state = app.state::<Mutex<Users>>();
-                let mut state = state.lock().unwrap();
+                let mut state = state.lock();
                 state.inner.retain(|e| e.id != user.id);
                 state.inner.push(user.clone());
                 // TODO: figure out when the instance is "settled" and up to date, and only do this then.
@@ -62,7 +62,7 @@ pub fn handle_join_leave(app: AppHandle, line: &VrcLogEntry) -> Result<bool, tau
                 if let Some(instance_state) =
                     app.try_state::<crate::memory::instance::InstanceStateMutex>()
                 {
-                    let instance_state = instance_state.lock().unwrap();
+                    let instance_state = instance_state.lock();
                     if instance_state.settled {
                         drop(instance_state); // Release the lock early
                         thread_query_user_info(app.clone(), &user.id);
@@ -82,7 +82,7 @@ pub fn handle_join_leave(app: AppHandle, line: &VrcLogEntry) -> Result<bool, tau
                 let player_id = rest[open + 1..close].to_string();
                 let leave_time = parse_timestamp(&line.timestamp);
                 let state = app.state::<Mutex<Users>>();
-                let mut state = state.lock().unwrap();
+                let mut state = state.lock();
                 // Update the user's leave_time if they exist
                 if let Some(existing_user) = state.inner.iter_mut().find(|u| u.id == player_id) {
                     existing_user.leave_time = Some(leave_time);

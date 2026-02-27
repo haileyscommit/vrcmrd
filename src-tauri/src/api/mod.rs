@@ -1,8 +1,9 @@
 use std::{ops::Deref, path::Path, time::Duration};
 
+use parking_lot::Mutex;
 use reqwest::cookie::CookieStore;
 use reqwest_drive::{CachePolicy, ThrottlePolicy, init_cache_with_throttle};
-use tauri::{async_runtime::Mutex, AppHandle, Emitter, Listener, Manager, Wry};
+use tauri::{AppHandle, Emitter, Listener, Manager, Wry};
 use vrchatapi::{apis::configuration::Configuration, models::RegisterUserAccount200Response};
 
 #[macro_use]
@@ -67,7 +68,7 @@ pub async fn initialize_api(app: AppHandle) -> Result<(), ()> {
     // Get existing config from state if available
     {
         let state = app.state::<VrchatApiStateMutex>();
-        let guard = state.lock().await;
+        let guard = state.lock();
         if let VrchatApiState {
             config: Some(existing_config),
             ..
@@ -78,7 +79,7 @@ pub async fn initialize_api(app: AppHandle) -> Result<(), ()> {
     }
     let cookie_jar = {
         let state = app.state::<VrchatApiStateMutex>();
-        let guard = state.lock().await;
+        let guard = state.lock();
         if let VrchatApiState {
             cookies: Some(existing_cookies),
             ..
@@ -178,7 +179,7 @@ pub async fn initialize_api(app: AppHandle) -> Result<(), ()> {
     // If there's a 2FA code, verify the session with it.
     let two_factor_code = {
         let mutex = app.state::<VrchatApiStateMutex>();
-        let guard = mutex.lock().await;
+        let guard = mutex.lock();
         match guard.clone().mode {
             VrchatApiMode::TwoFactorCode(code) => Some(code),
             _ => None,
@@ -195,7 +196,7 @@ pub async fn initialize_api(app: AppHandle) -> Result<(), ()> {
                 if !response.verified {
                     eprintln!("Two-factor authentication code was not verified.");
                     // Change the state back to NotReady to force re-initialization
-                    *app.state::<VrchatApiStateMutex>().lock().await = VrchatApiState::not_ready();
+                    *app.state::<VrchatApiStateMutex>().lock() = VrchatApiState::not_ready();
                     return Err(());
                 }
                 println!("Two-factor authentication code verified successfully.");
@@ -203,7 +204,7 @@ pub async fn initialize_api(app: AppHandle) -> Result<(), ()> {
             Err(e) => {
                 eprintln!("Failed to verify two-factor authentication code: {:?}", e);
                 // Change the state back to NotReady to force re-initialization
-                *app.state::<VrchatApiStateMutex>().lock().await = VrchatApiState::not_ready();
+                *app.state::<VrchatApiStateMutex>().lock() = VrchatApiState::not_ready();
                 return Err(());
             }
         }
@@ -251,7 +252,7 @@ pub async fn initialize_api(app: AppHandle) -> Result<(), ()> {
                                 });
                         });
                     config.basic_auth = None; // Clear basic auth to use cookie-based auth
-                    *app.state::<VrchatApiStateMutex>().lock().await = VrchatApiState {
+                    *app.state::<VrchatApiStateMutex>().lock() = VrchatApiState {
                         mode: VrchatApiMode::Ready,
                         cookies: Some(std::sync::Arc::clone(&cookie_jar)),
                         config: Some(config.clone()),
@@ -267,7 +268,7 @@ pub async fn initialize_api(app: AppHandle) -> Result<(), ()> {
                     );
                     eprintln!("Two-factor authentication required. Requesting token from user. Info: {:?}", info);
                     //app.exit(401);
-                    *app.state::<VrchatApiStateMutex>().lock().await = VrchatApiState {
+                    *app.state::<VrchatApiStateMutex>().lock() = VrchatApiState {
                         mode: VrchatApiMode::Preparing,
                         cookies: Some(std::sync::Arc::clone(&cookie_jar)),
                         config: Some(config.clone()),
@@ -328,7 +329,7 @@ pub async fn logout(app: tauri::AppHandle<Wry>) -> Result<(), String> {
     };
     // Reset API state
     let api_state_mutex = app.state::<VrchatApiStateMutex>().clone();
-    let mut api_state = api_state_mutex.lock().await;
+    let mut api_state = api_state_mutex.lock();
     *api_state = VrchatApiState::not_ready();
     Ok(())
 }
@@ -341,7 +342,7 @@ pub async fn submit_2fa_token(
 ) -> Result<(), String> {
     println!("Received 2FA token from UI.");
     let (config, cookies) = {
-        let mut guard = config_state.deref().lock().await;
+        let mut guard = config_state.deref().lock();
         match guard.clone() {
             VrchatApiState {
                 mode: VrchatApiMode::Preparing,
@@ -361,7 +362,7 @@ pub async fn submit_2fa_token(
         }
     };
     let _ = {
-        let mut api_state = config_state.deref().lock().await;
+        let mut api_state = config_state.deref().lock();
         *api_state = VrchatApiState {
             mode: VrchatApiMode::TwoFactorCode(token),
             cookies: Some(cookies),
@@ -371,7 +372,7 @@ pub async fn submit_2fa_token(
 
     #[cfg(debug_assertions)]
     {
-        let api_state = config_state.deref().lock().await;
+        let api_state = config_state.deref().lock();
         if api_state.mode != VrchatApiMode::Ready {
             eprintln!("DEBUG: Status: {:?}", api_state);
         }
@@ -382,12 +383,12 @@ pub async fn submit_2fa_token(
     println!("Submitting 2FA token and re-initializing VRChat API.");
     if let Err(_) = initialize_api(app_clone.clone()).await {
         eprintln!("Failed to initialize VRChat API after submitting 2FA token.");
-        *app_clone.state::<VrchatApiStateMutex>().lock().await = VrchatApiState::not_ready();
+        *app_clone.state::<VrchatApiStateMutex>().lock() = VrchatApiState::not_ready();
         return Err("Failed to initialize VRChat API after submitting 2FA token.".into());
     }
 
     {
-        let api_state = config_state.deref().lock().await;
+        let api_state = config_state.deref().lock();
         if api_state.mode != VrchatApiMode::Ready {
             eprintln!(
                 "VRChat API not ready after submitting 2FA token. Status: {:?}",
@@ -404,7 +405,7 @@ pub async fn submit_2fa_token(
 pub async fn cancel_login(app: tauri::AppHandle<Wry>) -> Result<(), String> {
     // User cancelled the login process (like a broken log-out).
     let api_state_mutex = app.state::<VrchatApiStateMutex>().clone();
-    let mut api_state = api_state_mutex.lock().await;
+    let mut api_state = api_state_mutex.lock();
     *api_state = VrchatApiState::not_ready();
     Ok(())
 }
@@ -413,7 +414,7 @@ pub async fn cancel_login(app: tauri::AppHandle<Wry>) -> Result<(), String> {
 /// To use the API:
 /// ```rust
 /// //app is a tauri::AppHandle
-/// let api_state = app.state::<VrchatApiStateMutex>().lock().unwrap();
+/// let api_state = app.state::<VrchatApiStateMutex>().lock();
 /// if let Some(VrchatApiState { mode: VrchatApiMode::Ready, config: Some(config) }) = &*api_state {
 ///     // Pass `config` to vrchatapi::apis methods
 /// }
@@ -436,7 +437,7 @@ pub fn vrchat_api_plugin() -> tauri::plugin::TauriPlugin<Wry> {
                     *app_handle_for_once
                         .state::<VrchatApiStateMutex>()
                         .lock()
-                        .await = VrchatApiState {
+                        = VrchatApiState {
                         mode: VrchatApiMode::Preparing,
                         cookies: None,
                         config: None,
@@ -450,7 +451,7 @@ pub fn vrchat_api_plugin() -> tauri::plugin::TauriPlugin<Wry> {
                             *app_handle_reset_state
                                 .state::<VrchatApiStateMutex>()
                                 .lock()
-                                .await = VrchatApiState::not_ready();
+                                = VrchatApiState::not_ready();
                         }
                     }
                     drop(app_handle_for_once);

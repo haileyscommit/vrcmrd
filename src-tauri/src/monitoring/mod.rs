@@ -208,7 +208,7 @@ pub fn start_monitoring_logfiles(app: tauri::AppHandle) {
     let _ = thread::spawn(move || {
         println!("Monitoring VRChat logs.");
         for evt in rx {
-            //println!("{:?}", evt);
+            // println!("{:?}", evt.message);
             match instance::handle_joined_instance(app.clone(), &evt) {
                 Ok(true) => continue, // handled
                 Ok(false) => {}

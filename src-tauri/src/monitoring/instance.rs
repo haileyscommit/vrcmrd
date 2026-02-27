@@ -1,4 +1,4 @@
-use std::sync::Mutex;
+use parking_lot::Mutex;
 
 use tauri::{AppHandle, Emitter, Manager};
 
@@ -23,7 +23,7 @@ pub fn handle_joined_instance(app: AppHandle, line: &VrcLogEntry) -> Result<bool
         let instance_id = rest;
         println!("Joined instance: {}", instance_id);
         let state = app.state::<Mutex<InstanceState>>();
-        let mut state = state.lock().unwrap();
+        let mut state = state.lock();
         state.id = Some(instance_id.to_string());
         // Parse the instance ID into its components, if possible
         let instance_id_info = VrcMrdInstanceId::from(instance_id);
@@ -32,7 +32,7 @@ pub fn handle_joined_instance(app: AppHandle, line: &VrcLogEntry) -> Result<bool
         state.settled = false;
         // Clear the user list when joining a new instance
         let users_state = app.state::<Mutex<Users>>();
-        let mut users_state = users_state.lock().unwrap();
+        let mut users_state = users_state.lock();
         users_state.inner.clear();
         // Emit an event
         app.emit("vrcmrd:instance", instance_id.to_string())?;
@@ -75,7 +75,7 @@ pub fn query_instance_info(app: AppHandle, instance_id: &VrcMrdInstanceId) {
                         .map(|w| w.set_title(&title));
                     let _ = handle.emit("vrcmrd:instance_details", instance_info.clone());
                     let mut handled: Vec<String> = vec![];
-                    handle.state::<InstanceStateMutex>().lock().unwrap().info =
+                    handle.state::<InstanceStateMutex>().lock().info =
                         Some(instance_info.clone());
                     {
                         // Update users in list based on instance info
@@ -83,7 +83,7 @@ pub fn query_instance_info(app: AppHandle, instance_id: &VrcMrdInstanceId) {
                         // includes this information. Therefore, this isn't very well tested, since I'm logging
                         // in to test the API with an account that isn't logged in to the game...
                         let users_state = handle.state::<Mutex<Users>>();
-                        let mut users_state = users_state.lock().unwrap();
+                        let mut users_state = users_state.lock();
                         for member in instance_info.clone().users.unwrap_or_default() {
                             for user in users_state.inner.iter_mut() {
                                 if user.id == member.clone().id {
@@ -107,7 +107,7 @@ pub fn query_instance_info(app: AppHandle, instance_id: &VrcMrdInstanceId) {
                     }
                     // Now, for any users not handled, manually query their info
                     let users_state = handle.state::<Mutex<Users>>();
-                    let users_state = users_state.lock().unwrap();
+                    let users_state = users_state.lock();
                     for user in users_state.inner.iter() {
                         if !handled.contains(&user.id) {
                             if user.trust_rank.is_none() {

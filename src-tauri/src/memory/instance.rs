@@ -1,8 +1,9 @@
 use std::{
     ops::Deref,
-    sync::{Arc, Mutex},
+    sync::{Arc, OnceLock},
 };
 
+use parking_lot::Mutex;
 use tauri::{Emitter, Listener, Manager, Runtime, Wry};
 use vrchatapi::models::Instance;
 
@@ -37,22 +38,22 @@ pub fn instance_memory_plugin() -> tauri::plugin::TauriPlugin<Wry> {
                 let app_clone = app.app_handle().clone();
                 let id = app.listen("vrcmrd:cache_refresh", move |_| {
                     let state = app_clone.state::<InstanceStateMutex>();
-                    let state = state.lock().unwrap();
+                    let state = state.lock();
                     if state.id_info.is_none() {
                         return;
                     }
                     crate::monitoring::instance::query_instance_info(app_clone.clone(), state.id_info.as_ref().unwrap());
                 });
-                *listener.lock().unwrap() = Some(id);
+                *listener.lock() = Some(id);
             }
 
             // join listener
             {
                 let app_clone = app.app_handle().clone();
                 let id2 = app.listen("vrcmrd:join", move |_| {
-                    static SETTLE_TX: std::sync::OnceLock<std::sync::Mutex<Option<std::sync::mpsc::Sender<()>>>> = std::sync::OnceLock::new();
-                    let tx_mutex = SETTLE_TX.get_or_init(|| std::sync::Mutex::new(None));
-                    let mut guard = tx_mutex.lock().unwrap();
+                    static SETTLE_TX: OnceLock<Mutex<Option<std::sync::mpsc::Sender<()>>>> = OnceLock::new();
+                    let tx_mutex = SETTLE_TX.get_or_init(|| Mutex::new(None));
+                    let mut guard = tx_mutex.lock();
 
                     // spawn the timer thread if not already running
                     if guard.is_none() {
@@ -68,7 +69,7 @@ pub fn instance_memory_plugin() -> tauri::plugin::TauriPlugin<Wry> {
                                         // TODO: make sure the list isn't empty
                                         let app_for_users = app_for_thread.clone();
                                         let users = app_for_users.state::<Mutex<Users>>();
-                                        let users = users.lock().unwrap();
+                                        let users = users.lock();
                                         if users.inner.is_empty() {
                                             println!("Not marking instance as settled yet; user list is still empty.");
                                             continue;
@@ -81,7 +82,8 @@ pub fn instance_memory_plugin() -> tauri::plugin::TauriPlugin<Wry> {
                             }
                             // clear the sender so next join will create a new thread
                             if let Some(m) = SETTLE_TX.get() {
-                                if let Ok(mut g) = m.lock() { *g = None; }
+                                let mut g = m.lock();
+                                *g = None;
                             }
                         });
                     }
@@ -91,7 +93,7 @@ pub fn instance_memory_plugin() -> tauri::plugin::TauriPlugin<Wry> {
                         let _ = tx.send(());
                     }
                 });
-                *listener2.lock().unwrap() = Some(id2);
+                *listener2.lock() = Some(id2);
             }
 
             // settled listener
@@ -99,7 +101,7 @@ pub fn instance_memory_plugin() -> tauri::plugin::TauriPlugin<Wry> {
                 let app_clone = app.app_handle().clone();
                 let id3 = app.listen("vrcmrd:settled", move |_| {
                     let state = app_clone.state::<InstanceStateMutex>();
-                    let mut state = state.lock().unwrap();
+                    let mut state = state.lock();
                     state.settled = true;
                     let id_info = state.id_info.clone();
                     drop(state); // Release the lock early
@@ -112,20 +114,20 @@ pub fn instance_memory_plugin() -> tauri::plugin::TauriPlugin<Wry> {
                         eprintln!("Instance ID info not available when marking instance as settled.");
                     }
                 });
-                *listener3.lock().unwrap() = Some(id3);
+                *listener3.lock() = Some(id3);
             }
 
             Ok(())
         }
     })
     .on_drop(move |app| {
-        if let Some(listener_id) = *listener.lock().unwrap() {
+        if let Some(listener_id) = *listener.lock() {
             app.unlisten(listener_id);
         }
-        if let Some(listener_id) = *listener2.lock().unwrap() {
+        if let Some(listener_id) = *listener2.lock() {
             app.unlisten(listener_id);
         }
-        if let Some(listener_id) = *listener3.lock().unwrap() {
+        if let Some(listener_id) = *listener3.lock() {
             app.unlisten(listener_id);
         }
     })
@@ -137,16 +139,10 @@ pub async fn get_instance_id<R: Runtime>(
     app: tauri::AppHandle<R>,
     _window: tauri::Window<R>,
 ) -> Result<Option<String>, String> {
-    match app.state::<InstanceStateMutex>().lock() {
-        Ok(instance_id_mutex) => {
-            let instance_id = instance_id_mutex.deref().id.clone();
-            Ok(instance_id)
-        }
-        Err(e) => {
-            eprintln!("Failed to lock instance ID mutex: {:?}", e);
-            Err(e.to_string())
-        }
-    }
+    let instance_state = app.state::<InstanceStateMutex>();
+    let instance_id_mutex = instance_state.lock();
+    let instance_id = instance_id_mutex.deref().id.clone();
+    Ok(instance_id)
 }
 
 #[tauri::command]
@@ -154,19 +150,13 @@ pub async fn get_instance_id_info<R: Runtime>(
     app: tauri::AppHandle<R>,
     _window: tauri::Window<R>,
 ) -> Result<Option<VrcMrdInstanceId>, String> {
-    match app.state::<InstanceStateMutex>().lock() {
-        Ok(instance_id_mutex) => {
-            if let Some(ref instance_id_str) = instance_id_mutex.deref().id {
-                let instance_info = VrcMrdInstanceId::from(instance_id_str);
-                Ok(Some(instance_info))
-            } else {
-                Ok(None)
-            }
-        }
-        Err(e) => {
-            eprintln!("Failed to lock instance state mutex: {:?}", e);
-            Err(e.to_string())
-        }
+    let instance_state = app.state::<InstanceStateMutex>();
+    let instance_id_mutex = instance_state.lock();
+    if let Some(ref instance_id_str) = instance_id_mutex.deref().id {
+        let instance_info = VrcMrdInstanceId::from(instance_id_str);
+        Ok(Some(instance_info))
+    } else {
+        Ok(None)
     }
 }
 
@@ -176,17 +166,11 @@ pub async fn get_instance_info<R: Runtime>(
     app: tauri::AppHandle<R>,
     _window: tauri::Window<R>,
 ) -> Result<Option<Instance>, String> {
-    match app.state::<InstanceStateMutex>().lock() {
-        Ok(instance_id_mutex) => {
-            if let Some(ref instance_info) = instance_id_mutex.deref().info {
-                Ok(Some(instance_info.clone()))
-            } else {
-                Ok(None)
-            }
-        }
-        Err(e) => {
-            eprintln!("Failed to lock instance state mutex: {:?}", e);
-            Err(e.to_string())
-        }
+    let instance_state = app.state::<InstanceStateMutex>();
+    let instance_id_mutex = instance_state.lock();
+    if let Some(ref instance_info) = instance_id_mutex.deref().info {
+        Ok(Some(instance_info.clone()))
+    } else {
+        Ok(None)
     }
 }

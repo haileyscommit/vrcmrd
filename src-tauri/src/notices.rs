@@ -1,13 +1,14 @@
 use crate::{
-    api::xsoverlay::XSOVERLAY_SOCKET, memory::{advisories::AdvisoryMemory, instance::InstanceStateMutex}, settings::get_config, types::{
+    api::xsoverlay::XSOVERLAY_SOCKET, memory::advisories::AdvisoryMemory, settings::get_config, types::{
         advisories::{AdvisoryLevel, Notice},
         xsoverlay::{XSOverlayCommand, XSOverlayNotificationObject},
     }
 };
 use futures_util::SinkExt;
+use parking_lot::Mutex;
 use tauri_plugin_tts::{SpeakRequest, TtsExt};
 use std::{
-    ops::{Deref, DerefMut}, sync::Mutex
+    ops::{Deref, DerefMut}
 };
 use tauri::{Emitter, Manager, Wry};
 #[cfg(target_os = "windows")]
@@ -19,7 +20,6 @@ pub async fn get_all_notices(app: tauri::AppHandle<Wry>) -> Result<Vec<Notice>, 
     let notices = app
         .state::<Mutex<AdvisoryMemory>>()
         .lock()
-        .map_err(|e| e.to_string())?
         .deref()
         .notices
         .clone();
@@ -30,7 +30,7 @@ pub fn publish_notice(app: tauri::AppHandle<Wry>, notice: Notice) -> Result<(), 
     {
         // Add the notice to memory (where the UI can find it)
         let advisory_memory = app.state::<Mutex<AdvisoryMemory>>();
-        let mut advisory_memory = advisory_memory.lock().map_err(|e| e.to_string())?;
+        let mut advisory_memory = advisory_memory.lock();
         advisory_memory.deref_mut().notices.push(notice.clone());
     }
     // Emit an event so the UI can react immediately (show toast, update notice list)
@@ -42,12 +42,18 @@ pub fn publish_notice(app: tauri::AppHandle<Wry>, notice: Notice) -> Result<(), 
     let settled_for_user = {
         let notice = notice.clone();
         let users_state = app.state::<Mutex<crate::memory::users::Users>>();
-        let users_state = users_state.lock().map_err(|e| e.to_string())?;
-        if notice.relevant_user_id.is_some() && users_state.joined_before_settled.contains(&notice.clone().relevant_user_id.unwrap()) {
-            println!("Skipping notification for user {} because they joined before me", notice.relevant_user_id.unwrap());
-            false
+        let users_state = users_state.try_lock_for(std::time::Duration::from_secs(2));
+        if let Some(users_state) = users_state {
+            if notice.relevant_user_id.is_some() && users_state.joined_before_settled.contains(&notice.clone().relevant_user_id.unwrap()) {
+                println!("Skipping notification for user {} because they joined before me", notice.relevant_user_id.unwrap());
+                drop(users_state);
+                false
+            } else {
+                drop(users_state);
+                true
+            }
         } else {
-            true
+            false
         }
     };
 
@@ -66,9 +72,12 @@ pub fn publish_notice(app: tauri::AppHandle<Wry>, notice: Notice) -> Result<(), 
             }
             println!("Sending notification for notice with title: {}", notice.title.clone().unwrap_or("No title".to_string()));
             // TODO: if notif_preference == 1 && inJoinMode { show to host only } else if notif_preference == 2 { always show me notifications }
-            let mut socket_guard = XSOVERLAY_SOCKET.lock().await;
+            let mut socket = {
+                let mut socket_guard = XSOVERLAY_SOCKET.lock();
+                socket_guard.take()
+            };
             println!("Sending XSOverlay notification");
-            if socket_guard.is_some() {
+            if socket.is_some() {
                 let notification = XSOverlayNotificationObject {
                     title: notice.title.clone(),
                     content: Some(notice.message.clone()),
@@ -87,7 +96,7 @@ pub fn publish_notice(app: tauri::AppHandle<Wry>, notice: Notice) -> Result<(), 
                 };
                 // #[cfg(debug_assertions)]
                 // println!("[DEBUG] Sending XSOverlay notification: {:?}", serde_json::to_string(&command).unwrap());
-                let _ = socket_guard
+                let _ = socket
                     .as_mut()
                     .unwrap()
                     .send(reqwest_websocket::Message::Text(
@@ -95,17 +104,20 @@ pub fn publish_notice(app: tauri::AppHandle<Wry>, notice: Notice) -> Result<(), 
                     ))
                     .await
                     .map_err(|e| eprintln!("Could not send XSOverlay notification: {:?}", e));
-                let _ = socket_guard
+                let _ = socket
                     .as_mut()
                     .unwrap()
                     .flush()
                     .await
                     .map_err(|e| eprintln!("Could not flush XSOverlay notifications: {:?}", e));
+                {
+                    let mut socket_guard = XSOVERLAY_SOCKET.lock();
+                    *socket_guard = socket;
+                }
                 // #[cfg(debug_assertions)]
                 // println!("[DEBUG] Sent!");
                 return;
             } else {
-                drop(socket_guard);
                 // TODO: send OVR Toolkit notification if applicable
                 // TODO: send desktop notification if neither of the above are available
                 // Desktop notification

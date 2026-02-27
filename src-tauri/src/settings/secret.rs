@@ -16,7 +16,7 @@ pub async fn update_credentials(
         // Unready the API
         println!("Setting API to NotReady state to update credentials");
         let api = app.state::<VrchatApiStateMutex>();
-        let mut api_lock = api.lock().await;
+        let mut api_lock = api.lock();
         api_lock.mode = crate::api::VrchatApiMode::NotReady;
         api_lock.cookies = None;
         api_lock.config = None;

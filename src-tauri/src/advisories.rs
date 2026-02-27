@@ -1,5 +1,5 @@
 use std::ops::{Deref, DerefMut};
-use std::sync::Mutex;
+use parking_lot::Mutex;
 
 use nid::alphabet::Base58Alphabet;
 use nid::Nanoid;
@@ -35,7 +35,6 @@ pub async fn add_advisory(app: tauri::AppHandle<Wry>, advisory: Advisory) -> Res
     {
         app.state::<Mutex<AdvisoryMemory>>()
             .lock()
-            .unwrap()
             .deref_mut()
             .set(adv.clone());
     }
@@ -55,14 +54,14 @@ pub async fn get_advisories(app: tauri::AppHandle<Wry>) -> Result<Vec<Advisory>,
     // };
     //let adv: Vec<Advisory> = serde_json::from_str(&adv).map_err(|e| e.to_string())?;
     let advisory_memory = app.state::<Mutex<AdvisoryMemory>>();
-    let advisory_memory = advisory_memory.lock().unwrap();
+    let advisory_memory = advisory_memory.lock();
     return Ok(advisory_memory.deref().all_advisories.clone());
     //Ok(adv)
 }
 
 pub async fn get_active_advisories(app: tauri::AppHandle<Wry>) -> Result<Vec<Advisory>, String> {
     let advisory_memory = app.state::<Mutex<AdvisoryMemory>>();
-    let advisory_memory = advisory_memory.lock().unwrap();
+    let advisory_memory = advisory_memory.lock();
     return Ok(advisory_memory.deref().active_advisories.clone());
 }
 
@@ -78,7 +77,7 @@ pub async fn get_advisory(
     // let adv: Vec<Advisory> = serde_json::from_str(&adv).map_err(|e| e.to_string())?;
     // Ok(adv.into_iter().find(|a| a.id == advisory_id))
     let advisory_memory = app.state::<Mutex<AdvisoryMemory>>();
-    let advisory_memory = advisory_memory.lock().unwrap();
+    let advisory_memory = advisory_memory.lock();
     Ok(advisory_memory
         .deref()
         .all_advisories
@@ -102,7 +101,6 @@ pub async fn remove_advisory(app: tauri::AppHandle<Wry>, advisory_id: &str) -> R
     {
         app.state::<Mutex<AdvisoryMemory>>()
             .lock()
-            .unwrap()
             .deref_mut()
             .set(adv.clone());
     }
@@ -128,7 +126,6 @@ pub async fn update_advisory(app: tauri::AppHandle<Wry>, advisory: Advisory) -> 
     {
         app.state::<Mutex<AdvisoryMemory>>()
             .lock()
-            .unwrap()
             .deref_mut()
             .set(adv.clone());
     }

@@ -1,4 +1,6 @@
-use std::{ops::Deref, sync::Mutex};
+use std::ops::Deref;
+
+use parking_lot::Mutex;
 
 use tauri::{Manager, Runtime, Wry};
 use vrchatapi::models::LimitedUserInstance;
@@ -30,16 +32,10 @@ pub async fn get_users<R: Runtime>(
     app: tauri::AppHandle<R>,
     _window: tauri::Window<R>,
 ) -> Result<Vec<VrcMrdUser>, String> {
-    match app.state::<Mutex<Users>>().lock() {
-        Ok(users_mutex) => {
-            let users = users_mutex.deref().inner.clone();
-            Ok(users)
-        }
-        Err(e) => {
-            eprintln!("Failed to lock users mutex: {:?}", e);
-            Err(e.to_string())
-        }
-    }
+    let users_state = app.state::<Mutex<Users>>();
+    let users_mutex = users_state.lock();
+    let users = users_mutex.deref().inner.clone();
+    Ok(users)
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -61,7 +57,7 @@ pub async fn get_user_info(
         Ok(Some(user_info)) => {
             let base_user = {
                 let users_state = app.state::<Mutex<Users>>();
-                let users_state = users_state.lock().unwrap();
+                let users_state = users_state.lock();
                 users_state
                     .inner
                     .iter()
@@ -72,7 +68,7 @@ pub async fn get_user_info(
             let remote_user = Some(user_info);
             {
                 let users_state = app.state::<Mutex<Users>>();
-                let mut users_state = users_state.lock().unwrap();
+                let mut users_state = users_state.lock();
                 if let Some(existing_user) = users_state.inner.iter_mut().find(|u| u.id == user_id)
                 {
                     // Update existing user

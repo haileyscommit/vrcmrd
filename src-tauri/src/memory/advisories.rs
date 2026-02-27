@@ -1,4 +1,6 @@
-use std::{ops::DerefMut, sync::Mutex};
+use std::ops::DerefMut;
+
+use parking_lot::Mutex;
 
 use tauri::{Manager, Runtime};
 
@@ -57,7 +59,6 @@ pub fn advisory_memory_plugin<R: Runtime>() -> tauri::plugin::TauriPlugin<R> {
                     app_clone
                         .state::<Mutex<AdvisoryMemory>>()
                         .lock()
-                        .unwrap()
                         .deref_mut()
                         .set(adv);
                 }

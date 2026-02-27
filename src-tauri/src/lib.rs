@@ -83,6 +83,18 @@ pub fn run() {
             tauri::async_runtime::spawn(async move {
                 let _ = api::xsoverlay::start_xsoverlay_socket(appclone.clone()).await;
             });
+            tauri::async_runtime::spawn(async {
+                loop {
+                    tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+                    for deadlock in parking_lot::deadlock::check_deadlock() {
+                        println!("Deadlock detected:");
+                        for thread in deadlock {
+                            println!("Thread Id {:#?}", thread.thread_id());
+                            println!("{:#?}", thread.backtrace());
+                        }
+                    }
+                };
+            });
             Ok(())
         })
         .build(tauri::generate_context!())

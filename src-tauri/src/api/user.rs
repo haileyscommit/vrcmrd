@@ -1,4 +1,6 @@
-use std::{cell::RefCell, collections::HashMap, ops::Deref, sync::Mutex};
+use std::{cell::RefCell, collections::HashMap, ops::Deref};
+
+use parking_lot::Mutex;
 
 use chrono::NaiveDate;
 use tauri::{AppHandle, Emitter, Manager};
@@ -17,7 +19,7 @@ pub async fn query_user_info(app: AppHandle, user_id: &str) {
     // Check if user is already in memory (i.e. in instance)
     let base_user = {
         let users_state = app.state::<Mutex<Users>>();
-        let users_state = users_state.lock().unwrap();
+        let users_state = users_state.lock();
         users_state.inner.iter().find(|u| u.id == user_id).cloned()
     };
     if base_user.is_none() {
@@ -37,7 +39,7 @@ pub async fn query_user_info(app: AppHandle, user_id: &str) {
     let groups = {
         let has_group_membership_advisory = {
             let advisories = app.state::<Mutex<AdvisoryMemory>>();
-            let advisories = advisories.lock().unwrap();
+            let advisories = advisories.lock();
             advisories.deref().has_group_membership_advisory
         };
         let base_groups = base_user.clone().unwrap().groups.clone();
@@ -84,7 +86,7 @@ pub async fn query_user_info(app: AppHandle, user_id: &str) {
                 groups.clone(),
             );
             let users_state = app.state::<Mutex<Users>>();
-            let mut users_state = users_state.lock().unwrap();
+            let mut users_state = users_state.lock();
             // Update or insert user
             if let Some(existing_user) = users_state
                 .inner
@@ -164,7 +166,6 @@ impl VrcMrdUser {
         let active_advisories = app
             .state::<Mutex<AdvisoryMemory>>()
             .lock()
-            .unwrap()
             .deref()
             .active_advisories
             .clone();
@@ -229,7 +230,7 @@ impl VrcMrdUser {
                 }
                 AdvisoryCondition::InstanceOwner(owner_id) => {
                     let instance_state = app.state::<crate::memory::instance::InstanceStateMutex>();
-                    let instance_state = instance_state.lock().unwrap();
+                    let instance_state = instance_state.lock();
                     if let Some(owner) = instance_state.info.clone().unwrap().owner_id.flatten() {
                         if owner == owner_id {
                             return true;
