@@ -88,23 +88,35 @@ pub fn run() {
             let appclone = app.handle().clone();
             let stophandle = tauri::async_runtime::spawn(async move {
                 let _ = api::xsoverlay::start_xsoverlay_socket(appclone.clone()).await;
+                println!("XSOverlay initial socket connection quit.");
             });
             let stophandle = std::sync::Arc::new(parking_lot::Mutex::new(stophandle));
             let appclone = app.handle().clone();
             let stophandle_clone = stophandle.clone();
-            let xso_refresh_handler = move |_e| {
+            let xso_refresh_handler = move |_| {
                 // This soft-refresh handler restarts the XSOverlay connection if it needs to
                 #[cfg(debug_assertions)]
-                println!("Received cache refresh event, checking XSOverlay connection...");
+                println!("Received refresh event, checking XSOverlay connection...");
                 let appclone = appclone.clone();
                 let socket = XSOVERLAY_SOCKET.try_lock_for(std::time::Duration::from_secs(1));
-                if socket.is_none_or(|v| v.is_none()) {
+                if socket.is_none() || socket.as_ref().unwrap().is_none() {
+                    if stophandle_clone.lock().inner().is_finished() {
+                        println!("XSOverlay socket connection is not active, restarting...");
+                    } else if socket.is_none() {
+                        println!("Could not acquire lock on XSOverlay socket, it may be stuck! Not restarting for now...");
+                        return;
+                    } else {
+                        #[cfg(debug_assertions)]
+                        println!("XSOverlay socket is still connected.");
+                        return;
+                    }
                     // If we can't acquire the lock or the socket is not available, try to restart the socket connection
                     let mut handle = stophandle_clone.lock();
                     println!("Restarting XSOverlay socket connection...");
                     handle.abort();
                     *handle = tauri::async_runtime::spawn(async move {
                         let _ = api::xsoverlay::start_xsoverlay_socket(appclone.clone()).await;
+                        println!("XSOverlay socket connection quit.");
                     });
                 } else {
                     #[cfg(debug_assertions)]

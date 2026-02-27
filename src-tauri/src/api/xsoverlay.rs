@@ -1,10 +1,10 @@
-use std::sync::{Arc, LazyLock};
+use std::{os::windows::thread, sync::{Arc, LazyLock}};
 
 use futures_util::{stream::TryStreamExt, SinkExt};
 use parking_lot::Mutex;
-use reqwest::Client;
+use reqwest::{Client, retry};
 use reqwest_websocket::{Message, RequestBuilderExt};
-use tauri::{Emitter, EventTarget, Wry};
+use tauri::{Emitter, EventTarget, Wry, async_runtime::JoinHandle};
 
 pub static XSOVERLAY_SOCKET: LazyLock<
     Arc<Mutex<Option<reqwest_websocket::WebSocket>>>,
@@ -26,9 +26,9 @@ pub async fn start_xsoverlay_socket(
     }
     println!("Connected to XSOverlay WebSocket.");
     // Start listening for messages
-    tauri::async_runtime::spawn(async move {
+    // let thread_handle = tauri::async_runtime::spawn(async move {
         let socket_lock = XSOVERLAY_SOCKET.clone();
-        // let mut retry_count = 0;
+        let mut retry_count: u8 = 0;
         loop {
             tokio::time::sleep(std::time::Duration::from_millis(100)).await; // Prevent busy loop
             let mut websocket = {
@@ -37,17 +37,22 @@ pub async fn start_xsoverlay_socket(
             };
 
             if websocket.is_none() {
-                break;
-                // // If the socket is not available, wait and try again
-                // println!("XSOverlay WebSocket is not available, retrying...");
-                // retry_count += 1;
-                // if retry_count > 10 {
-                //     eprintln!("Failed to connect to XSOverlay WebSocket after {} attempts, giving up.", retry_count);
-                //     break;
-                // }
-                // continue;
+                // If the socket is not available, wait and try again
+                retry_count += 1;
+                if retry_count > 0 {
+                    println!("XSOverlay WebSocket is not available, retrying (attempt {})...", retry_count);
+                    continue;
+                }
+                if retry_count > 10 {
+                    eprintln!("Failed to connect to XSOverlay WebSocket after {} attempts, giving up.", retry_count);
+                    break;
+                }
+                continue;
             }
-            // retry_count = 0; // Reset retry count on successful connection
+            if retry_count > 0 {
+                println!("Successfully connected to XSOverlay WebSocket after {} retries.", retry_count);
+            }
+            retry_count = 0; // Reset retry count on successful connection
 
             let timeout = tokio::time::timeout(
                 std::time::Duration::from_millis(100),
@@ -99,7 +104,7 @@ pub async fn start_xsoverlay_socket(
                 *socket_guard = websocket;
             }
         }
-    });
+    // });
     Ok(())
 }
 
