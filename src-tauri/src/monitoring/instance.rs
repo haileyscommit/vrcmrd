@@ -58,8 +58,8 @@ pub fn query_instance_info(app: AppHandle, instance_id: &VrcMrdInstanceId) {
             match response {
                 Ok(Some(instance_info)) => {
                     let handle = app.clone();
-                    println!("Fetched instance info: {:?}", instance_info);
-                    //println!("Received instance info for {}", &instance_info.id);
+                    //println!("Fetched instance info: {:?}", instance_info);
+                    println!("Received instance info for {}", &instance_info.id);
                     let name = {
                         if let Some(display_name) = instance_info.clone().display_name.flatten() {
                             display_name

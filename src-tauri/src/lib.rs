@@ -1,6 +1,10 @@
 #[cfg(target_os = "windows")]
 use std::collections::HashMap;
 
+use tauri::Listener;
+
+use crate::api::xsoverlay::XSOVERLAY_SOCKET;
+
 mod advisories;
 mod api;
 mod memory;
@@ -79,10 +83,39 @@ pub fn run() {
             //#[cfg(target_os = "linux")]
             //keyring_core::set_default_store(dbus_secret_service_keyring_store::Store::new().unwrap());
             //app.handle().plugin(tauri_plugin_stronghold::Builder::with_argon2(&salt_path).build())?;
+
+            // XSOverlay WebSocket connection setup
             let appclone = app.handle().clone();
-            tauri::async_runtime::spawn(async move {
+            let stophandle = tauri::async_runtime::spawn(async move {
                 let _ = api::xsoverlay::start_xsoverlay_socket(appclone.clone()).await;
             });
+            let stophandle = std::sync::Arc::new(parking_lot::Mutex::new(stophandle));
+            let appclone = app.handle().clone();
+            let stophandle_clone = stophandle.clone();
+            let xso_refresh_handler = move |_e| {
+                // This soft-refresh handler restarts the XSOverlay connection if it needs to
+                #[cfg(debug_assertions)]
+                println!("Received cache refresh event, checking XSOverlay connection...");
+                let appclone = appclone.clone();
+                let socket = XSOVERLAY_SOCKET.try_lock_for(std::time::Duration::from_secs(1));
+                if socket.is_none_or(|v| v.is_none()) {
+                    // If we can't acquire the lock or the socket is not available, try to restart the socket connection
+                    let mut handle = stophandle_clone.lock();
+                    println!("Restarting XSOverlay socket connection...");
+                    handle.abort();
+                    *handle = tauri::async_runtime::spawn(async move {
+                        let _ = api::xsoverlay::start_xsoverlay_socket(appclone.clone()).await;
+                    });
+                } else {
+                    #[cfg(debug_assertions)]
+                    println!("XSOverlay socket connection is healthy, no need to restart.");
+                }
+            };
+            app.listen_any("vrcmrd:cache_refresh", xso_refresh_handler.clone());
+            app.listen_any("vrcmrd:settled", xso_refresh_handler.clone());
+            
+            // Deadlock detection
+            #[cfg(debug_assertions)]
             tauri::async_runtime::spawn(async {
                 loop {
                     tokio::time::sleep(std::time::Duration::from_secs(10)).await;

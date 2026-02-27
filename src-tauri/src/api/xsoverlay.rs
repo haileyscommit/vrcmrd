@@ -28,6 +28,7 @@ pub async fn start_xsoverlay_socket(
     // Start listening for messages
     tauri::async_runtime::spawn(async move {
         let socket_lock = XSOVERLAY_SOCKET.clone();
+        // let mut retry_count = 0;
         loop {
             tokio::time::sleep(std::time::Duration::from_millis(100)).await; // Prevent busy loop
             let mut websocket = {
@@ -36,8 +37,17 @@ pub async fn start_xsoverlay_socket(
             };
 
             if websocket.is_none() {
-                continue;
+                break;
+                // // If the socket is not available, wait and try again
+                // println!("XSOverlay WebSocket is not available, retrying...");
+                // retry_count += 1;
+                // if retry_count > 10 {
+                //     eprintln!("Failed to connect to XSOverlay WebSocket after {} attempts, giving up.", retry_count);
+                //     break;
+                // }
+                // continue;
             }
+            // retry_count = 0; // Reset retry count on successful connection
 
             let timeout = tokio::time::timeout(
                 std::time::Duration::from_millis(100),
