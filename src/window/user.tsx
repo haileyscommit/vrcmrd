@@ -9,7 +9,8 @@ import { formatAccountAge } from "../components/UserTable";
 import { render } from "preact/compat";
 import * as vrc from "vrchat";
 import AlertIcon from "mdi-preact/AlertOutlineIcon";
-import InfoIcon from "mdi-preact/InformationOutlineIcon";
+import InfoOutlineIcon from "mdi-preact/InformationOutlineIcon";
+import InfoFilledIcon from "mdi-preact/InformationIcon";
 import ErrorIcon from "mdi-preact/AlertIcon";
 import StopIcon from "mdi-preact/AlertOctagonIcon";
 import { listen } from "@tauri-apps/api/event";
@@ -86,10 +87,10 @@ export default function UserDetailsWindowContents() {
       {userInfo.local!.advisories.length > 0 && <ul className="list-disc list-inside">
           {userInfo.local!.advisories.sort((a, b) => b.level - a.level).map((adv, idx) => (
             <li key={idx}>{{
-              0: <InfoIcon className="inline align-middle w-4 h-4 text-blue-400 mr-1 mb-1" />,
-              1: <AlertIcon className="inline align-middle w-4 h-4 text-yellow-400 mr-1 mb-1" />,
-              2: <AlertIcon className="inline align-middle w-4 h-4 text-orange-400 mr-1 mb-1" />,
-              3: <ErrorIcon className="inline align-middle w-4 h-4 text-red-400 mr-1 mb-1" />,
+              0: <InfoOutlineIcon className="inline align-middle w-4 h-4 text-black dark:text-white mr-1 mb-1" />,
+              1: <InfoFilledIcon className="inline align-middle w-4 h-4 text-blue-400 mr-1 mb-1" />,
+              2: <AlertIcon className="inline align-middle w-4 h-4 text-yellow-400 mr-1 mb-1" />,
+              3: <ErrorIcon className="inline align-middle w-4 h-4 text-orange-400 mr-1 mb-1" />,
               4: <StopIcon className="inline align-middle w-4 h-4 text-red-400 mr-1 mb-1" />,
             }[adv.level]}
             {adv.message}{adv.relevantGroupId && <>{` (Group: `}<a href={`https://vrchat.com/home/group/${adv.relevantGroupId}`} target="_blank" rel="noopener noreferrer">{adv.relevantGroupId}</a>{`)`}</>}</li>
