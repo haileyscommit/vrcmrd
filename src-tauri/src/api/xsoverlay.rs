@@ -6,9 +6,14 @@ use reqwest::{Client, retry};
 use reqwest_websocket::{Message, RequestBuilderExt};
 use tauri::{Emitter, EventTarget, Wry, async_runtime::JoinHandle};
 
+use crate::types::xsoverlay::XSOverlayCommand;
+
 pub static XSOVERLAY_SOCKET: LazyLock<
     Arc<Mutex<Option<reqwest_websocket::WebSocket>>>,
 > = LazyLock::new(|| Arc::new(Mutex::new(None)));
+
+static XSO_QUEUED_COMMANDS: LazyLock<Arc<Mutex<Vec<XSOverlayCommand>>>> =
+    LazyLock::new(|| Arc::new(Mutex::new(Vec::new())));
 
 pub async fn start_xsoverlay_socket(
     app: tauri::AppHandle<Wry>,
@@ -30,7 +35,7 @@ pub async fn start_xsoverlay_socket(
         let socket_lock = XSOVERLAY_SOCKET.clone();
         let mut retry_count: u8 = 0;
         loop {
-            tokio::time::sleep(std::time::Duration::from_millis(100)).await; // Prevent busy loop
+            tokio::time::sleep(std::time::Duration::from_millis(100-(retry_count*10).max(0) as u64)).await; // Prevent busy loop
             let mut websocket = {
                 let mut socket_guard = socket_lock.lock();
                 socket_guard.take()
@@ -99,6 +104,33 @@ pub async fn start_xsoverlay_socket(
                 }
             }
 
+            let commands = {
+                let mut queued_commands_guard = XSO_QUEUED_COMMANDS.lock();
+                let commands = queued_commands_guard.drain(..).collect::<Vec<_>>();
+                commands
+            };
+            let commands_empty = commands.clone().is_empty();
+            for command in commands {
+                let _ = websocket
+                    .as_mut()
+                    .unwrap()
+                    .send(Message::Text(serde_json::to_string(&command).unwrap()))
+                    .await
+                    .map_err(|e| eprintln!("Could not send queued XSOverlay command: {:?}", e));
+                let _ = {
+                    let mut queued_commands_guard = XSO_QUEUED_COMMANDS.lock();
+                    queued_commands_guard.retain(|c| c != &command);
+                };
+            }
+            if !commands_empty {
+                let _ = websocket
+                    .as_mut()
+                    .unwrap()
+                    .flush()
+                    .await
+                    .map_err(|e| eprintln!("Could not flush XSOverlay commands: {:?}", e));
+            }
+
             {
                 let mut socket_guard = socket_lock.lock();
                 *socket_guard = websocket;
@@ -120,4 +152,10 @@ where
     } else {
         Err("XSOverlay WebSocket is not connected.".into())
     }
+}
+
+/// Adds an XSOverlay command to the queue to be sent on the next available opportunity. 
+/// This is used to send commands from other threads without needing to worry about locking the socket directly.
+pub fn queue_xsoverlay_command(command: XSOverlayCommand) {
+    XSO_QUEUED_COMMANDS.lock().push(command);
 }

@@ -1,5 +1,5 @@
 use crate::{
-    api::xsoverlay::XSOVERLAY_SOCKET, memory::advisories::AdvisoryMemory, settings::get_config, types::{
+    api::xsoverlay::{XSOVERLAY_SOCKET, queue_xsoverlay_command}, memory::advisories::AdvisoryMemory, settings::get_config, types::{
         advisories::{AdvisoryLevel, Notice},
         xsoverlay::{XSOverlayCommand, XSOverlayNotificationObject},
     }
@@ -72,12 +72,12 @@ pub fn publish_notice(app: tauri::AppHandle<Wry>, notice: Notice) -> Result<(), 
             }
             println!("Sending notification for notice with title: {}", notice.title.clone().unwrap_or("No title".to_string()));
             // TODO: if notif_preference == 1 && inJoinMode { show to host only } else if notif_preference == 2 { always show me notifications }
-            let mut socket = {
-                let mut socket_guard = XSOVERLAY_SOCKET.lock();
-                socket_guard.take()
+            let socket_ready = {
+                let socket_guard = XSOVERLAY_SOCKET.try_lock_for(std::time::Duration::from_secs(2));
+                socket_guard.is_some() && socket_guard.as_ref().unwrap().is_some()
             };
             println!("Sending XSOverlay notification");
-            if socket.is_some() {
+            if socket_ready {
                 let notification = XSOverlayNotificationObject {
                     title: notice.title.clone(),
                     content: Some(notice.message.clone()),
@@ -96,24 +96,25 @@ pub fn publish_notice(app: tauri::AppHandle<Wry>, notice: Notice) -> Result<(), 
                 };
                 // #[cfg(debug_assertions)]
                 // println!("[DEBUG] Sending XSOverlay notification: {:?}", serde_json::to_string(&command).unwrap());
-                let _ = socket
-                    .as_mut()
-                    .unwrap()
-                    .send(reqwest_websocket::Message::Text(
-                        serde_json::to_string(&command).unwrap(),
-                    ))
-                    .await
-                    .map_err(|e| eprintln!("Could not send XSOverlay notification: {:?}", e));
-                let _ = socket
-                    .as_mut()
-                    .unwrap()
-                    .flush()
-                    .await
-                    .map_err(|e| eprintln!("Could not flush XSOverlay notifications: {:?}", e));
-                {
-                    let mut socket_guard = XSOVERLAY_SOCKET.lock();
-                    *socket_guard = socket;
-                }
+                queue_xsoverlay_command(command);
+                // let _ = socket
+                //     .as_mut()
+                //     .unwrap()
+                //     .send(reqwest_websocket::Message::Text(
+                //         serde_json::to_string(&command).unwrap(),
+                //     ))
+                //     .await
+                //     .map_err(|e| eprintln!("Could not send XSOverlay notification: {:?}", e));
+                // let _ = socket
+                //     .as_mut()
+                //     .unwrap()
+                //     .flush()
+                //     .await
+                //     .map_err(|e| eprintln!("Could not flush XSOverlay notifications: {:?}", e));
+                // {
+                //     let mut socket_guard = XSOVERLAY_SOCKET.lock();
+                //     *socket_guard = socket;
+                // }
                 // #[cfg(debug_assertions)]
                 // println!("[DEBUG] Sent!");
                 return;
