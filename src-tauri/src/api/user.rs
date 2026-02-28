@@ -172,6 +172,7 @@ impl VrcMrdUser {
         for advisory in active_advisories.iter() {
             let relevant_group_id: RefCell<Option<String>> = RefCell::new(None);
             let templates = RefCell::new(HashMap::new());
+            let keep = RefCell::new(Vec::new());
             templates
                 .borrow_mut()
                     .insert("username", self.username.clone());
@@ -189,6 +190,7 @@ impl VrcMrdUser {
                     if self.groups.is_empty() && advisories.iter().any(|a| a.id == advisory.id) {
                         // if the advisory is already active and groups are not available, assume the user is
                         // still in the group.
+                        keep.borrow_mut().push(advisory.id.clone());
                         return true;
                     }
                         for group in self.groups.iter() {
@@ -257,6 +259,7 @@ impl VrcMrdUser {
                     if self.groups.is_empty() && advisories.iter().any(|a| a.id == advisory.id) {
                         // if the advisory is already active and groups are not available, assume the user is
                         // still in the group.
+                        keep.borrow_mut().push(advisory.id.clone());
                         return true;
                     }
                     let group = self.groups.iter().find(|g| g.name.to_lowercase().contains(&needle.to_lowercase()));
@@ -278,7 +281,7 @@ impl VrcMrdUser {
                 if advisories.iter().any(|a| a.id == advisory.id) {
                     // Update the existing advisory, especially if the advisory settings changed
                     for existing in advisories.iter_mut() {
-                        if existing.id == advisory.id {
+                        if existing.id == advisory.id && !keep.borrow().contains(&advisory.id) {
                             existing.message = apply_templating(
                                 advisory.message_template.clone().as_str(),
                                 &templates.borrow(),
