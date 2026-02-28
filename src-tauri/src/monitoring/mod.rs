@@ -22,6 +22,8 @@ use tauri::{
 
 use crate::monitoring::path::get_monitor_path;
 
+const CATCH_UP_MARKER: &str = "$vrcmrd_monitor_catch_up_marker$";
+
 pub struct VrcLogEntry {
     pub timestamp: String,
     //pub level: String,
@@ -84,7 +86,7 @@ fn is_timestamped_line(b: &[u8]) -> bool {
 
 /// Start monitoring `path` on a background thread. Returns a receiver of events and a handle
 /// to stop the monitor. The monitor polls the file every `interval`.
-fn start_logfile_monitor(path: impl Into<PathBuf>, interval: Duration, mark_caught_up_sender: Sender<()>) -> Receiver<VrcLogEntry> {
+fn start_logfile_monitor(path: impl Into<PathBuf>, interval: Duration) -> Receiver<VrcLogEntry> {
     // this is `mut` so that it can be updated if a new log file appears
     #[allow(unused_mut)]
     let mut path = path.into();
@@ -127,6 +129,12 @@ fn start_logfile_monitor(path: impl Into<PathBuf>, interval: Duration, mark_caug
                 Err(e) => {
                     eprintln!("Failed to read file: {:?}", e);
                     continue;
+                }
+            }
+            #[cfg(debug_assertions)]
+            {
+                if !new_bytes.is_empty() {
+                    eprintln!("Read {} new bytes from log file.", new_bytes.len());
                 }
             }
             if !new_bytes.is_empty() {
@@ -181,17 +189,17 @@ fn start_logfile_monitor(path: impl Into<PathBuf>, interval: Duration, mark_caug
                     }
                 }
                 //tx.send(vec![...]).ok();
+                
+                // Mark the monitor as caught up after the first read, so that we can start settling instances and processing join/leave events.
+                if !is_caught_up {
+                    is_caught_up = true;
+                    tx.send(VrcLogEntry { timestamp: "Now".to_string(), message: CATCH_UP_MARKER.to_string() }).ok();
+                    println!("Initial log read complete.");
+                }
             }
 
             // Get the new length after reading
             last_len = file.metadata().map(|m| m.len()).unwrap_or(last_len);
-
-            // Mark the monitor as caught up after the first read, so that we can start settling instances and processing join/leave events.
-            if !is_caught_up {
-                is_caught_up = true;
-                let _ = mark_caught_up_sender.send(());
-                println!("Initial log read complete, monitor is now caught up.");
-            }
 
             thread::sleep(interval);
         }
@@ -207,8 +215,8 @@ pub fn start_monitoring_logfiles(app: tauri::AppHandle) {
     // Example usage
     let file_to_watch =
         env::var("APPDATA").unwrap_or_default() + "\\..\\LocalLow\\VRChat\\VRChat\\";
-    let (mark_caught_up_tx, mark_caught_up_rx) = std::sync::mpsc::channel();
-    let rx = start_logfile_monitor(file_to_watch, Duration::from_millis(200), mark_caught_up_tx);
+    //let (mark_caught_up_tx, mark_caught_up_rx) = std::sync::mpsc::channel();
+    let rx = start_logfile_monitor(file_to_watch, Duration::from_millis(200));
 
     // Spawn a thread to print events (main thread could also handle them).
     let app_clone = app.clone();
@@ -217,6 +225,13 @@ pub fn start_monitoring_logfiles(app: tauri::AppHandle) {
         println!("Monitoring VRChat logs.");
         for evt in rx {
             // println!("{:?}", evt.message);
+            if is_catch_up(&evt) {
+                println!("Emitting monitor_ready event; monitor is now caught up.");
+                let state = app_clone.state::<crate::memory::instance::InstanceStateMutex>();
+                let mut state = state.lock();
+                state.isCaughtUp = true;
+                let _ = app_clone.emit("vrcmrd:monitor_ready", ());
+            }
             match instance::handle_joined_instance(app_clone.clone(), &evt) {
                 Ok(true) => continue, // handled
                 Ok(false) => {}
@@ -235,19 +250,18 @@ pub fn start_monitoring_logfiles(app: tauri::AppHandle) {
         }
         println!("Monitor stopped and channel closed.");
     });
-    let app_clone = app.clone();
-    let _ = thread::spawn(move || {
-        // Wait for the monitor to be caught up before emitting the "monitor_ready" event.
-        if mark_caught_up_rx.recv().is_ok() {
-            let app_clone = app_clone.clone();
-            println!("Emitting monitor_ready event.");
-            let state = app_clone.state::<crate::memory::instance::InstanceStateMutex>();
-            let mut state = state.lock();
-            state.isCaughtUp = true;
-            let _ = app_clone.emit("vrcmrd:monitor_ready", ());
-        }
-        // once it receives the monitor ready, this thread exits!
-    });
+    // let app_clone = app.clone();
+    // let _ = thread::spawn(move || {
+    //     // Wait for the monitor to be caught up before emitting the "monitor_ready" event.
+    //     if mark_caught_up_rx.recv().is_ok() {
+    //         let app_clone = app_clone.clone();
+    //         #[cfg(debug_assertions)]
+    //         println!("[DEBUG] Monitor caught up with existing logs, waiting for processing to finish.");
+    //         CATCHING_UP.store(false, Ordering::SeqCst);
+            
+    //     }
+    //     // once it receives the monitor ready, this thread exits!
+    // });
 
     // Let it run for 10 seconds in this example, then stop.
     // thread::sleep(Duration::from_secs(10));
@@ -263,4 +277,8 @@ pub fn monitoring_plugin() -> TauriPlugin<Wry> {
             Ok(())
         })
         .build()
+}
+
+fn is_catch_up(evt: &VrcLogEntry) -> bool {
+    evt.message == CATCH_UP_MARKER
 }
