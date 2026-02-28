@@ -186,7 +186,7 @@ impl VrcMrdUser {
                         self.platform.as_deref().unwrap_or("").to_lowercase() == platform.to_lowercase()
                 }
                 AdvisoryCondition::IsGroupMember(group_id) => {
-                        if self.groups.is_empty() && advisories.iter().any(|a| a.id == advisory.id) {
+                    if self.groups.is_empty() && advisories.iter().any(|a| a.id == advisory.id) {
                         // if the advisory is already active and groups are not available, assume the user is
                         // still in the group.
                         return true;
@@ -254,6 +254,11 @@ impl VrcMrdUser {
                     matches
                 },
                 AdvisoryCondition::InGroupNameContains(needle) => {
+                    if self.groups.is_empty() && advisories.iter().any(|a| a.id == advisory.id) {
+                        // if the advisory is already active and groups are not available, assume the user is
+                        // still in the group.
+                        return true;
+                    }
                     let group = self.groups.iter().find(|g| g.name.to_lowercase().contains(&needle.to_lowercase()));
                     if let Some(group) = group {
                         templates.borrow_mut().insert("group_name", group.name.clone());
