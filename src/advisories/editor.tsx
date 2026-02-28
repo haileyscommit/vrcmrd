@@ -80,10 +80,14 @@ export default function AdvisoryEditor({ advisory, isNew, setOverlay, setDialog 
             const insert = "{{:account_age_days:}}";
             setMessageTemplate(messageTemplate + insert);
           }}><PlusIcon class="inline align-middle w-4 h-4 mr-1 mb-1" />Account Age (days)</button>}
-          {NestedConditionTypes(condition).includes("IsGroupMember") && <button class="px-2 py-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full text-sm hover:bg-gray-300 dark:hover:bg-gray-600" onClick={() => {
+          {(NestedConditionTypes(condition).includes("IsGroupMember") || NestedConditionTypes(condition).includes("InGroupNameContains")) && <button class="px-2 py-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full text-sm hover:bg-gray-300 dark:hover:bg-gray-600" onClick={() => {
             const insert = "{{:group_name:}}";
             setMessageTemplate(messageTemplate + insert);
           }}><PlusIcon class="inline align-middle w-4 h-4 mr-1 mb-1" />Group Name</button>}
+          {(NestedConditionTypes(condition).includes("AvatarMayBe") || NestedConditionTypes(condition).includes("AvatarNameContains")) && <button class="px-2 py-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full text-sm hover:bg-gray-300 dark:hover:bg-gray-600" onClick={() => {
+            const insert = "{{:avatar_name:}}";
+            setMessageTemplate(messageTemplate + insert);
+          }}><PlusIcon class="inline align-middle w-4 h-4 mr-1 mb-1" />Avatar Name</button>}
         </div>
         <p class="mb-2 text-sm text-gray-600 dark:text-gray-400">The message that will be shown or spoken when this advisory is applied. You can use variables like <code>{'{{:variable||default:}}'}</code> to include specific context.</p>
       </div>
