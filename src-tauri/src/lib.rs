@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 use tauri::Listener;
 
-use crate::api::xsoverlay::XSOVERLAY_SOCKET;
+use crate::api::xsoverlay::XSO_CONNECTED;
 
 mod advisories;
 mod api;
@@ -98,13 +98,13 @@ pub fn run() {
                 #[cfg(debug_assertions)]
                 println!("Received refresh event, checking XSOverlay connection...");
                 let appclone = appclone.clone();
-                let socket = XSOVERLAY_SOCKET.try_lock_for(std::time::Duration::from_secs(1));
-                if socket.is_none() || socket.as_ref().unwrap().is_none() {
+                let connected = {
+                    let lock = XSO_CONNECTED.lock();
+                    *lock
+                };
+                if !connected {
                     if stophandle_clone.lock().inner().is_finished() {
                         println!("XSOverlay socket connection is not active, restarting...");
-                    } else if socket.is_none() {
-                        println!("Could not acquire lock on XSOverlay socket, it may be stuck! Not restarting for now...");
-                        return;
                     } else {
                         #[cfg(debug_assertions)]
                         println!("XSOverlay socket is still connected.");

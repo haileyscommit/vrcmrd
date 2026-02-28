@@ -1,10 +1,9 @@
 use crate::{
-    api::xsoverlay::{XSOVERLAY_SOCKET, queue_xsoverlay_command}, memory::advisories::AdvisoryMemory, settings::get_config, types::{
+    api::xsoverlay::{XSO_CONNECTED, queue_xsoverlay_command}, memory::advisories::AdvisoryMemory, settings::get_config, types::{
         advisories::{AdvisoryLevel, Notice},
         xsoverlay::{XSOverlayCommand, XSOverlayNotificationObject},
     }
 };
-use futures_util::SinkExt;
 use parking_lot::Mutex;
 use tauri_plugin_tts::{SpeakRequest, TtsExt};
 use std::{
@@ -73,11 +72,11 @@ pub fn publish_notice(app: tauri::AppHandle<Wry>, notice: Notice) -> Result<(), 
             println!("Sending notification for notice with title: {}", notice.title.clone().unwrap_or("No title".to_string()));
             // TODO: if notif_preference == 1 && inJoinMode { show to host only } else if notif_preference == 2 { always show me notifications }
             let socket_ready = {
-                let socket_guard = XSOVERLAY_SOCKET.try_lock_for(std::time::Duration::from_secs(2));
-                socket_guard.is_some() && socket_guard.as_ref().unwrap().is_some()
+                let connected = XSO_CONNECTED.lock();
+                *connected
             };
-            println!("Sending XSOverlay notification");
             if socket_ready {
+                println!("Sending XSOverlay notification");
                 let notification = XSOverlayNotificationObject {
                     title: notice.title.clone(),
                     content: Some(notice.message.clone()),
@@ -121,6 +120,7 @@ pub fn publish_notice(app: tauri::AppHandle<Wry>, notice: Notice) -> Result<(), 
             } else {
                 // TODO: send OVR Toolkit notification if applicable
                 // TODO: send desktop notification if neither of the above are available
+                println!("Sending desktop notification");
                 // Desktop notification
                 #[cfg(not(target_os = "windows"))]
                 Notification::new()
