@@ -245,7 +245,14 @@ impl VrcMrdUser {
                     }
                     false
                 }
-                AdvisoryCondition::AvatarNameContains(needle) => self.avatar_name.to_lowercase().contains(&needle.to_lowercase()),
+                AdvisoryCondition::AvatarNameContains(needle) => {
+                    let avatar_name = self.avatar_name.clone();
+                    let matches = avatar_name.clone().to_lowercase().contains(&needle.to_lowercase());
+                    if matches {
+                        templates.borrow_mut().insert("avatar_name", avatar_name.clone());
+                    }
+                    matches
+                },
                 AdvisoryCondition::InGroupNameContains(needle) => {
                     let group = self.groups.iter().find(|g| g.name.to_lowercase().contains(&needle.to_lowercase()));
                     if let Some(group) = group {
