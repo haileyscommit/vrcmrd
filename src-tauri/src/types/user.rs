@@ -28,7 +28,7 @@ impl GetTrustRank for User {
             TrustRank::NewUser
         } else if self.tags.contains(&"system_trust_known".to_string()) {
             TrustRank::User
-        } else if self.tags.contains(&"system_nuisance".to_string()) {
+        } else if self.tags.contains(&"system_probable_troll".to_string()) {
             TrustRank::Nuisance
         } else {
             TrustRank::Visitor
