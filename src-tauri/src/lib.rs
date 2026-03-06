@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 use tauri::Listener;
 
-use crate::api::xsoverlay::XSO_CONNECTED;
+use crate::{api::xsoverlay::XSO_CONNECTED, notices::get_aumid};
 
 mod advisories;
 mod api;
@@ -62,6 +62,34 @@ pub fn run() {
             notices::get_all_notices,
         ])
         .setup(|app| {
+            #[cfg(target_os = "windows")]
+            if let None = get_aumid() {
+                //println!("Could not get AUMID, desktop notifications may not work properly on Windows.");
+
+                // #[cfg(debug_assertions)] {
+                //     use crate::notices::set_aumid;
+
+                //     println!("[DEBUG] Setting AUMID");
+                //     set_aumid("com.system32labs.vrcmrd").expect("Failed to set AUMID, desktop notifications may not work properly on Windows during development.");
+                // }
+                //#[cfg(not(debug_assertions))]
+                {
+                    use std::path::MAIN_SEPARATOR as SEP;
+                    use crate::notices::set_aumid;
+
+                    let exe = tauri::utils::platform::current_exe()?;
+                    let exe_dir = exe.parent().expect("failed to get exe directory");
+                    let curr_dir = exe_dir.display().to_string();
+                    // set the notification's System.AppUserModel.ID only when running the installed app
+                    if !(curr_dir.ends_with(format!("{SEP}target{SEP}debug").as_str())
+                        || curr_dir.ends_with(format!("{SEP}target{SEP}release").as_str()))
+                    {
+                        set_aumid(&app.config().identifier).expect("Failed to set AUMID, desktop notifications may not work properly on Windows.");
+                    } else {
+                        println!("Not installed, skipping setting AUMID. Desktop notifications may not work properly if the app is not run from an installed location.");
+                    }
+                }
+            } 
             // let salt_path = app
             //     .path()
             //     .app_local_data_dir()

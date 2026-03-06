@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "vrcmrd",
+  "productName": "VRCMRD",
   "version": "0.1.0",
   "identifier": "com.system32labs.vrcmrd",
   "build": {

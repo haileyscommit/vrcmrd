@@ -12,6 +12,10 @@ use std::{
 use tauri::{Emitter, Manager, Wry};
 #[cfg(target_os = "windows")]
 use tauri_winrt_notification::Toast;
+#[cfg(target_os = "windows")]
+use windows::{
+    Win32::UI::Shell::{GetCurrentProcessExplicitAppUserModelID, SetCurrentProcessExplicitAppUserModelID}, core::{PCWSTR, PWSTR}
+};
 
 // TODO: chunk notice list, so the UI doesn't have to load them all at once when it opens the notices tab
 #[tauri::command]
@@ -132,7 +136,7 @@ pub fn publish_notice(app: tauri::AppHandle<Wry>, notice: Notice) -> Result<(), 
                     .map_err(|e| eprintln!("Could not send desktop notification: {:?}", e))
                     .ok();
                 #[cfg(target_os = "windows")]
-                Toast::new(Toast::POWERSHELL_APP_ID)
+                Toast::new(get_aumid().unwrap_or(Toast::POWERSHELL_APP_ID.to_string()).as_str())
                     .title(&notice.title.unwrap_or("New notice".to_owned()))
                     .text1(&notice.message)
                     .duration(tauri_winrt_notification::Duration::Short)
@@ -198,4 +202,26 @@ fn wrapped_lines_count(s: &str) -> usize {
             chunks.len()
         })
         .sum()
+}
+
+#[cfg(target_os = "windows")]
+pub fn get_aumid() -> Option<String> {
+    unsafe {
+        if let Ok(id) = GetCurrentProcessExplicitAppUserModelID() {
+            if !id.is_null() {
+                let s = id.to_string().ok();
+                windows::Win32::System::Com::CoTaskMemFree(Some(id.0 as _));
+                return s;
+            }
+        }
+    }
+    None
+}
+#[cfg(target_os = "windows")]
+pub fn set_aumid(id: &str) -> windows::core::Result<()> {
+    let wide: Vec<u16> = id.encode_utf16().chain(std::iter::once(0)).collect();
+
+    unsafe {
+        SetCurrentProcessExplicitAppUserModelID(PCWSTR(wide.as_ptr()))
+    }
 }
