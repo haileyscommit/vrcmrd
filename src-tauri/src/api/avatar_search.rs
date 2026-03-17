@@ -2,7 +2,6 @@
 use itertools::Itertools;
 use parking_lot::Mutex;
 use tauri::{AppHandle, Emitter, Manager};
-use vrchatapi::models::avatar;
 
 /// Searches for avatars using third-party APIs (same as VRCX uses).
 use crate::{api::VrchatApiStateMutex, memory::users::Users, types::{VrcMrdUser, avatar::{AvatarBundleFileMetadata, GetWorstRank, PerfRank, VrcxAvatarSearchResult}}};

@@ -10,7 +10,7 @@ use std::{
     io::{Read, Seek},
     path::PathBuf,
     sync::{
-        Arc, atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver, Sender}
+        Arc, atomic::{AtomicBool, Ordering}, mpsc::{self, Receiver}
     },
     thread,
     time::Duration,

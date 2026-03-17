@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core"
 import Dropdown from "../../components/Dropdown"
 import { useEffect, useState } from "preact/hooks"
-import { emit, listen } from "@tauri-apps/api/event";
+import { listen } from "@tauri-apps/api/event";
 import { Checkbox } from "@headlessui/react";
 import CheckIcon from "mdi-preact/CheckIcon";
 

@@ -14,7 +14,7 @@ use tauri::{Emitter, Manager, Wry};
 use tauri_winrt_notification::Toast;
 #[cfg(target_os = "windows")]
 use windows::{
-    Win32::UI::Shell::{GetCurrentProcessExplicitAppUserModelID, SetCurrentProcessExplicitAppUserModelID}, core::{PCWSTR, PWSTR}
+    Win32::UI::Shell::{GetCurrentProcessExplicitAppUserModelID, SetCurrentProcessExplicitAppUserModelID}, core::PCWSTR
 };
 
 // TODO: chunk notice list, so the UI doesn't have to load them all at once when it opens the notices tab

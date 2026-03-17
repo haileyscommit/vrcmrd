@@ -1,8 +1,8 @@
 use parking_lot::Mutex;
 
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{AppHandle, Manager};
 
-use crate::{api::avatar_search::{get_file_id_from_image_url, update_avatar}, memory::users::Users, monitoring::VrcLogEntry};
+use crate::{api::avatar_search::update_avatar, memory::users::Users, monitoring::VrcLogEntry};
 
 pub fn handle_switched_avatar(app: AppHandle, line: &VrcLogEntry) -> Result<bool, tauri::Error> {
     // Determine if this is an instance join line

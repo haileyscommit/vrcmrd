@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use tauri::{Emitter, Listener, Manager, Runtime};
 
 pub mod user;
