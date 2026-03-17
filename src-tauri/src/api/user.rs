@@ -7,8 +7,7 @@ use tauri::{AppHandle, Emitter, Manager};
 use vrchatapi::models::LimitedUserInstance;
 
 use crate::{
-    advisories::apply_templating, memory::{advisories::AdvisoryMemory, users::Users}, notices::publish_notice,
-    types::{
+    advisories::apply_templating, api::avatar_search::update_avatar, memory::{advisories::AdvisoryMemory, users::Users}, notices::publish_notice, types::{
         PartialGroup, VrcMrdUser, advisories::{ActiveAdvisory, AdvisoryCondition, make_notice}, user::{CommonUser, GetTrustRank}
     }
 };
@@ -78,7 +77,6 @@ pub async fn query_user_info(app: AppHandle, user_id: &str) {
     match user {
         Ok(Some(user_info)) => {
             println!("Received user info for {} via API", user_id);
-            // TODO: use the "system_probable_troll" field to add an advisory
             let mut vrcmrd_user = base_user.unwrap();
             let vrcmrd_user = vrcmrd_user.update_from(
                 app.clone(),
@@ -93,11 +91,16 @@ pub async fn query_user_info(app: AppHandle, user_id: &str) {
                 .iter_mut()
                 .find(|u| u.id == vrcmrd_user.id)
             {
+                
                 *existing_user = vrcmrd_user.clone();
             } else {
                 users_state.inner.push(vrcmrd_user.clone());
             }
             let _ = app.emit("vrcmrd:update-user", vrcmrd_user.clone());
+            if vrcmrd_user.avatar_id.is_none() {
+                let user = vrcmrd_user.clone();
+                update_avatar(user, app.clone());
+            }
         }
         Ok(None) => {
             eprintln!("User not found for ID: {}", user_id);
@@ -138,6 +141,13 @@ impl VrcMrdUser {
                         .and_then(|r| Some(r.and_utc().timestamp()))
                 });
         }
+        let mut avatar_images = Vec::<String>::new();
+        avatar_images.push(user.current_avatar_image_url.clone());
+        avatar_images.push(user.current_avatar_thumbnail_image_url.clone());
+        if let Some(image) = user.image_url.clone() {
+            avatar_images.push(image);
+        }
+        self.avatar_images = avatar_images;
         self.trust_rank = Some(user.trust_rank());
         self.platform = {
             let platform = user.last_platform;

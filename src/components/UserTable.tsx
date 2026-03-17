@@ -185,13 +185,10 @@ export default function UserTable() {
                 </td>
                 <td class="px-2 align-middle font-semibold">
                   <div data-tooltip-id="tooltip" data-tooltip-content={u.perfRank}>
-                    {u.perfRank ? <img src={{
-                      "Excellent": "/assets/perf/excellent.png",
-                      "Good": "/assets/perf/good.png",
-                      "Medium": "/assets/perf/medium.png",
-                      "Poor": "/assets/perf/poor.png",
-                      "VeryPoor": "/assets/perf/very-poor.png",
-                    }[u.perfRank]} class="w-5 h-5" /> : "?"}
+                    {u.perfRank 
+                    ? <img src={`/assets/perf/${u.perfRank.toLowerCase()}.png`} class="w-5 h-5" /> 
+                    : <HelpOutlineIcon class="w-5 h-5 text-gray-400" />
+                    }
                   </div>
                 </td>
                 <td class="px-2 py-1 align-middle text-xs text-gray-500 text-right">{formatAccountAge(u.accountCreated)}</td>

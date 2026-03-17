@@ -41,6 +41,9 @@ tauri-plugin-tts = "0.1.2"
 reqwest-drive = "0.1.0-alpha.9"
 reqwest-middleware = "0.4.2"
 parking_lot = { version = "0.12.5", features = ["deadlock_detection"] }
+itertools = "0.14.0"
+fuzzy-cmp = "0.1.3"
+async-trait = "0.1.89"
 
 [dependencies.vrchatapi]
 git = "https://github.com/C0D3-M4513R/vrchatapi-rust.git"

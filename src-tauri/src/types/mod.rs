@@ -1,8 +1,11 @@
 use serde::{Deserialize, Serialize};
+
+use crate::types::avatar::PerfRank;
 pub mod advisories;
 mod instance_id;
 pub mod user;
 pub mod xsoverlay;
+pub mod avatar;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -10,7 +13,9 @@ pub struct VrcMrdUser {
     pub id: String,
     pub username: String,
     pub avatar_name: String,
-    pub perf_rank: String,
+    pub avatar_id: Option<String>,
+    pub avatar_images: Vec<String>,
+    pub perf_rank: Option<PerfRank>,
     pub account_created: Option<i64>, // e.g. "3y"
     pub join_time: i64,               // e.g. "13:12"
     pub leave_time: Option<i64>,      // e.g. "13:24"

@@ -43,7 +43,9 @@ pub fn handle_join_leave(app: AppHandle, line: &VrcLogEntry) -> Result<bool, tau
                     id: player_id,
                     username: player_name,
                     avatar_name: avatar_name.unwrap_or_default(),
-                    perf_rank: "VeryPoor".to_string(), // TODO: determine actual perf rank
+                    avatar_id: None,
+                    avatar_images: vec![],
+                    perf_rank: None,
                     account_created: None,
                     join_time: parse_timestamp(&line.timestamp),
                     leave_time: None,
@@ -97,7 +99,9 @@ pub fn handle_join_leave(app: AppHandle, line: &VrcLogEntry) -> Result<bool, tau
                         id: player_id,
                         username: player_name,
                         avatar_name: String::new(),
-                        perf_rank: "VeryPoor".to_string(),
+                        avatar_id: None,
+                        avatar_images: vec![],
+                        perf_rank: None,
                         account_created: None,
                         join_time: 0, // TODO: store it as a unix timestamp and format on frontend
                         leave_time: Some(leave_time),

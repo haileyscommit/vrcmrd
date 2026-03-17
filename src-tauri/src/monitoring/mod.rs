@@ -2,6 +2,7 @@ mod avatars;
 pub mod instance;
 mod join_leave;
 mod path;
+mod file_analysis;
 
 use std::{
     env,
@@ -131,12 +132,12 @@ fn start_logfile_monitor(path: impl Into<PathBuf>, interval: Duration) -> Receiv
                     continue;
                 }
             }
-            #[cfg(debug_assertions)]
-            {
-                if !new_bytes.is_empty() {
-                    eprintln!("Read {} new bytes from log file.", new_bytes.len());
-                }
-            }
+            // #[cfg(debug_assertions)]
+            // {
+            //     if !new_bytes.is_empty() {
+            //         eprintln!("Read {} new bytes from log file.", new_bytes.len());
+            //     }
+            // }
             if !new_bytes.is_empty() {
                 // Convert bytes to string lines
                 // TODO: support multi-line entries (which don't start with a timestamp, level, and `-`)
@@ -246,6 +247,11 @@ pub fn start_monitoring_logfiles(app: tauri::AppHandle) {
                 Ok(true) => continue, // handled
                 Ok(false) => {}
                 Err(e) => eprintln!("Error handling join/leave: {:?}", e),
+            }
+            match file_analysis::handle_file_analysis_request(app_clone.clone(), &evt) {
+                Ok(true) => continue, // handled
+                Ok(false) => {}
+                Err(e) => eprintln!("Error handling file analysis request: {:?}", e),
             }
         }
         println!("Monitor stopped and channel closed.");

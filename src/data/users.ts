@@ -7,7 +7,7 @@ export type User = {
   id: string;
   username: string;
   avatarName: string;
-  perfRank: PerformanceRank;
+  perfRank?: PerformanceRank;
   accountCreated: number | null; // e.g. "3y"
   joinTime: number; // e.g. "13:12"
   leaveTime: number | null; // e.g. "13:24"

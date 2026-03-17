@@ -12,6 +12,8 @@ mod request;
 pub mod groups;
 pub mod user;
 pub mod xsoverlay;
+pub mod avatar_search;
+mod request_monitoring;
 
 pub const VRCHAT_AUTH_COOKIE_CREDENTIAL_KEY: &str = "VRChatCookies";
 pub const VRCHAT_API_USERNAME_CREDENTIAL_KEY: &str = "VRC_USERNAME";
@@ -23,6 +25,7 @@ pub struct VrchatApiState {
     pub mode: VrchatApiMode,
     pub cookies: Option<std::sync::Arc<reqwest::cookie::Jar>>,
     pub config: Option<Configuration>,
+    pub cache_file: Option<String>,
 }
 impl VrchatApiState {
     pub fn not_ready() -> VrchatApiState {
@@ -30,6 +33,7 @@ impl VrchatApiState {
             mode: VrchatApiMode::NotReady,
             cookies: None,
             config: None,
+            cache_file: None,
         }
     }
     // pub fn new_preparing(config: Configuration) -> VrchatApiState {
@@ -105,19 +109,22 @@ pub async fn initialize_api(app: AppHandle) -> Result<(), ()> {
             return Err(());
         }
     };
-    let (cache, throttle) = init_cache_with_throttle(
-        &app.path().app_cache_dir()
+    let cache_path = app.path().app_cache_dir()
             .unwrap_or_else(|_| Path::new(".").to_path_buf())
-            .join("vrchat_api_cache.bin").to_path_buf(),
+            .join("vrchat_api_cache.bin");
+    println!("Using VRChat API cache file at: {}", cache_path.to_string_lossy());
+    let (cache, throttle) = init_cache_with_throttle(
+        &cache_path.to_path_buf(),
         CachePolicy {
             respect_headers: true,
             default_ttl: Duration::from_secs(60 * 60 * 24 * 7), // a week, in seconds
+            cache_status_override: Some(vec![200, 410]),
             ..Default::default()
         },
         ThrottlePolicy {
             base_delay_ms: 200,
-            adaptive_jitter_ms: 100,
-            max_concurrent: 2,
+            adaptive_jitter_ms: 200,
+            max_concurrent: 3,
             max_retries: 3,
         }
     );
@@ -126,6 +133,7 @@ pub async fn initialize_api(app: AppHandle) -> Result<(), ()> {
         .cookie_provider(std::sync::Arc::clone(&cookie_jar))
         .build().unwrap();
     let client = reqwest_middleware::ClientBuilder::new(client)
+        //.with(request_monitoring::LoggingMiddleware {})
         .with_arc(cache)
         .with_arc(throttle)
         .build();
@@ -256,6 +264,7 @@ pub async fn initialize_api(app: AppHandle) -> Result<(), ()> {
                         mode: VrchatApiMode::Ready,
                         cookies: Some(std::sync::Arc::clone(&cookie_jar)),
                         config: Some(config.clone()),
+                        cache_file: cache_path.to_str().map(|s| s.to_string()),
                     };
                     Ok(())
                 }
@@ -272,6 +281,7 @@ pub async fn initialize_api(app: AppHandle) -> Result<(), ()> {
                         mode: VrchatApiMode::Preparing,
                         cookies: Some(std::sync::Arc::clone(&cookie_jar)),
                         config: Some(config.clone()),
+                        cache_file: cache_path.to_str().map(|s| s.to_string()),
                     };
                     Ok(())
                 }
@@ -341,19 +351,21 @@ pub async fn submit_2fa_token(
     config_state: tauri::State<'_, VrchatApiStateMutex>,
 ) -> Result<(), String> {
     println!("Received 2FA token from UI.");
-    let (config, cookies) = {
+    let (config, cookies, cache_file) = {
         let mut guard = config_state.deref().lock();
         match guard.clone() {
             VrchatApiState {
                 mode: VrchatApiMode::Preparing,
                 cookies: Some(cookies),
                 config: Some(cfg),
-            } => (cfg, cookies),
+                cache_file: Some(cache_file),
+            } => (cfg, cookies, cache_file),
             VrchatApiState {
                 mode: VrchatApiMode::TwoFactorCode(_),
                 cookies: Some(cookies),
                 config: Some(cfg),
-            } => (cfg, cookies),
+                cache_file: Some(cache_file),
+            } => (cfg, cookies, cache_file),
             other => {
                 *guard = other.clone();
                 eprintln!("API state not ready for 2FA token submission: {:?}", other);
@@ -367,6 +379,7 @@ pub async fn submit_2fa_token(
             mode: VrchatApiMode::TwoFactorCode(token),
             cookies: Some(cookies),
             config: Some(config.clone()),
+            cache_file: Some(cache_file),
         };
     };
 
@@ -427,6 +440,7 @@ pub fn vrchat_api_plugin() -> tauri::plugin::TauriPlugin<Wry> {
                 mode: VrchatApiMode::NotReady,
                 config: None,
                 cookies: None,
+                cache_file: None,
             }));
             // These two clones are needed to prevent borrowing issues.
             let app_handle = app.clone();
@@ -441,6 +455,7 @@ pub fn vrchat_api_plugin() -> tauri::plugin::TauriPlugin<Wry> {
                         mode: VrchatApiMode::Preparing,
                         cookies: None,
                         config: None,
+                        cache_file: None,
                     };
                     // These clones are also needed to prevent borrowing issues. Yay rust!
                     let task_handle = app_handle_for_once.clone();
@@ -457,6 +472,35 @@ pub fn vrchat_api_plugin() -> tauri::plugin::TauriPlugin<Wry> {
                     drop(app_handle_for_once);
                     drop(app_handle_reset_state);
                 });
+            });
+            let app_handle_for_once = app_handle.clone();
+            app_handle.once("vrcmrd:clear_cache", move |_e| {
+                let api_state = app_handle_for_once.state::<VrchatApiStateMutex>();
+                let api_state = api_state.lock();
+                if let VrchatApiState {
+                    mode: VrchatApiMode::Ready,
+                    //config: Some(config),
+                    cache_file: Some(cache_file),
+                    ..
+                } = &*api_state
+                {
+                    println!("Clearing VRChat API cache...");
+                    // Open file and empty it
+                    if let Err(e) = std::fs::OpenOptions::new()
+                        .write(true)
+                        .truncate(true)
+                        .open(cache_file)
+                        .map(|_| ())
+                    {
+                        eprintln!("Failed to clear VRChat API cache file: {:?}", e);
+                    } else {
+                        println!("VRChat API cache cleared successfully.");
+                    }
+                } else {
+                    eprintln!("Cannot clear VRChat API cache because API is not ready. Current state: {:?}", *api_state);
+                }
+                drop(api_state);
+                drop(app_handle_for_once);
             });
             drop(app_handle);
             Ok(())

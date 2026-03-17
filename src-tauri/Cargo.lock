@@ -1023,6 +1023,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "distance"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6d9d8664cf849d7d0f3114a3a387d2f5e4303176d746d5a951aaddc66dfe9240"
+
+[[package]]
 name = "dlopen2"
 version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1441,6 +1447,16 @@ dependencies = [
  "pin-project-lite",
  "pin-utils",
  "slab",
+]
+
+[[package]]
+name = "fuzzy-cmp"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9a354c3170e5fd8f552a0dbfa5a9b7b431b2fbcd552a6f9253f02cd34be9435f"
+dependencies = [
+ "distance",
+ "macron",
 ]
 
 [[package]]
@@ -2440,6 +2456,61 @@ dependencies = [
  "objc2",
  "objc2-foundation",
  "time",
+]
+
+[[package]]
+name = "macron"
+version = "0.1.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "198e43a0ea96c50e8aa3a91f8e2df589ae5d3347fd6ea2c006ca1137771491c6"
+dependencies = [
+ "macron-impl-display",
+ "macron-impl-error",
+ "macron-impl-from",
+ "macron-impl-into",
+]
+
+[[package]]
+name = "macron-impl-display"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f9ffb18d54a49dde4005773d8f2e2a709d2caa5561e8c8d430da4ec93a1c027f"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.114",
+]
+
+[[package]]
+name = "macron-impl-error"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f7011da048b35459f187b205f7721f5e0329c262a84b5b2a91ea781d11877eb5"
+dependencies = [
+ "quote",
+ "syn 2.0.114",
+]
+
+[[package]]
+name = "macron-impl-from"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a39985f0e374141b913618f753ca649da45dda47621cc4131959d721dc751635"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.114",
+]
+
+[[package]]
+name = "macron-impl-into"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2b10b6f502ff432df11bccd9cabda7febdc3f52c901a64edb4c27df3f2f4b2ff"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.114",
 ]
 
 [[package]]
@@ -5543,9 +5614,12 @@ version = "0.1.0"
 dependencies = [
  "android-native-keyring-store",
  "apple-native-keyring-store",
+ "async-trait",
  "chrono",
  "dbus-secret-service-keyring-store",
  "futures-util",
+ "fuzzy-cmp",
+ "itertools 0.14.0",
  "keyring-core",
  "nid",
  "notify-rust",

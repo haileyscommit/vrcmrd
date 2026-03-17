@@ -2,7 +2,7 @@ use parking_lot::Mutex;
 
 use tauri::{AppHandle, Emitter, Manager};
 
-use crate::{memory::users::Users, monitoring::VrcLogEntry};
+use crate::{api::avatar_search::{get_file_id_from_image_url, update_avatar}, memory::users::Users, monitoring::VrcLogEntry};
 
 pub fn handle_switched_avatar(app: AppHandle, line: &VrcLogEntry) -> Result<bool, tauri::Error> {
     // Determine if this is an instance join line
@@ -37,25 +37,44 @@ pub fn handle_switched_avatar(app: AppHandle, line: &VrcLogEntry) -> Result<bool
                     .pending_avatar_names
                     .push((username.clone(), avatar_name.clone()));
             } else {
-                let user_clone = app.clone();
-                //println!("User '{}' found in user list, updating avatar to '{}'", username, avatar_name);
-                // Update the user's avatar name directly
-                let users_state = app.state::<Mutex<Users>>();
-                let mut users_state = users_state.lock();
-                let mut found_user = Option::None;
-                for user in users_state.inner.iter_mut() {
-                    if user.username == username {
+                // User exists, lookup and update avatar data
+                {
+                    // Set avatar name immediately
+                    let users_state = app.state::<Mutex<Users>>();
+                    let mut users_state = users_state.lock();
+                    if let Some(user) = users_state
+                        .inner
+                        .iter_mut()
+                        .find(|user| user.username == username) {
                         user.avatar_name = avatar_name.clone();
-                        user.advisories = user.with_advisories(user_clone.clone(), crate::api::user::AdvisoryTrigger::AvatarSwitched);
-                        found_user = Some(user.clone());
-                        break;
+                    } else {
+                        eprintln!("User '{}' not found in user list after initial check", username);
+                        return Ok(false);
                     }
                 }
-                drop(users_state); // Release the lock early
-                if let Some(user) = found_user {
-                    // Emit an event
-                    app.emit("vrcmrd:update-user", user)?;
+                // Do network lookups and other stuff
+                let users_state = app.state::<Mutex<Users>>();
+                let users_state = users_state.lock();
+                let user = users_state
+                    .inner
+                    .iter()
+                    .find(|user| user.username == username)
+                    .unwrap()
+                    .clone();
+                let instance_state = app.state::<crate::memory::instance::InstanceStateMutex>();
+                let instance_state = instance_state.lock();
+                if users_state.joined_before_settled.contains(&user.id) || !instance_state.settled {
+                    #[cfg(debug_assertions)]
+                    eprintln!("User '{}' switched avatar before instance settled, not attempting avatar search", username);
+                } else {
+                    drop(users_state); // Release the lock before doing async work
+                    drop(instance_state);
+                    update_avatar(user.clone(), app.clone());
                 }
+                // if let Some(user) = found_user {
+                //     // Emit an event
+                //     app.emit("vrcmrd:update-user", user)?;
+                // }
             }
             return Ok(true);
         }

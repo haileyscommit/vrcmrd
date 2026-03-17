@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core"
 import Dropdown from "../../components/Dropdown"
 import { useEffect, useState } from "preact/hooks"
-import { listen } from "@tauri-apps/api/event";
+import { emit, listen } from "@tauri-apps/api/event";
 import { Checkbox } from "@headlessui/react";
 import CheckIcon from "mdi-preact/CheckIcon";
 
@@ -39,6 +39,12 @@ export default function PreferencesPage({ loading }: { loading: boolean }) {
   }, []);
   return <div className={`space-y-4 ${loading ? "opacity-50 pointer-events-none cursor-wait" : ""}`}>
     <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">Preferences</h2>
+    {/* this button doesn't work right now on the backend and I don't know why so I'll keep it commented out until it works right
+     <div className="space-y-2">
+      <button onClick={() => emit("vrcmrd:clear_cache")} className="px-4 py-2 rounded bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400">
+        Clear Cache
+      </button>
+    </div> */}
     <div className="space-y-2">
       <label className="block text-xs text-gray-600 dark:text-gray-400">Notification Preference</label>
       <Dropdown items={[

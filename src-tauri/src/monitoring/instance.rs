@@ -43,6 +43,14 @@ pub fn handle_joined_instance(app: AppHandle, line: &VrcLogEntry) -> Result<bool
             let mut users_state = users_state.lock();
             users_state.inner.clear();
         }
+        // Clear any pending avatar lookups; they aren't needed
+        {
+            let avatar_state = app.state::<crate::memory::users::avatar::AvatarsStateMutex>();
+            let mut avatar_state = avatar_state.lock();
+            avatar_state.pending_avatar_names.clear(); // If necessary, this will be repopulated as users are loaded in
+            //avatar_state.possible_avatar_files.clear(); // actually, keep these (this is a cache)
+            avatar_state.pending_file_metadata_lookups.clear();
+        }
         // Emit an event
         app.emit("vrcmrd:instance", instance_id.to_string())?;
         return Ok(true);
