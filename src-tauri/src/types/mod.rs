@@ -26,6 +26,12 @@ pub struct VrcMrdUser {
     pub groups: Vec<PartialGroup>,
 }
 
+impl VrcMrdUser {
+    pub fn is_in_instance(&self) -> bool {
+        self.leave_time.is_none() || self.leave_time.unwrap() < self.join_time
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PartialGroup {

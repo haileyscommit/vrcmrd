@@ -47,11 +47,12 @@ pub fn publish_notice(app: tauri::AppHandle<Wry>, notice: Notice) -> Result<(), 
         let users_state = app.state::<Mutex<crate::memory::users::Users>>();
         let users_state = users_state.try_lock_for(std::time::Duration::from_secs(2));
         if let Some(users_state) = users_state {
+            eprintln!("[DEBUG] Checking if notice is relevant for user. Notice relevant_user_id: {:?}, users_state.joined_before_settled: {:?}", notice.relevant_user_id, users_state.joined_before_settled.join(", "));
             if notice.relevant_user_id.is_some() && users_state.joined_before_settled.contains(&notice.clone().relevant_user_id.unwrap()) {
                 println!("Skipping notification for user {} because they joined before me", notice.relevant_user_id.unwrap());
                 drop(users_state);
                 false
-            } else {
+            }else {
                 drop(users_state);
                 true
             }
@@ -59,8 +60,18 @@ pub fn publish_notice(app: tauri::AppHandle<Wry>, notice: Notice) -> Result<(), 
             false
         }
     };
+    let user_in_instance = {
+        let users_state = app.state::<Mutex<crate::memory::users::Users>>();
+        let users_state = users_state.try_lock_for(std::time::Duration::from_secs(2));
+        if let Some(users_state) = users_state {
+            let in_instance = users_state.inner.iter().any(|u| u.id == notice.relevant_user_id.clone().unwrap_or_default() && u.is_in_instance());
+            in_instance
+        } else {
+            false
+        }
+    };
 
-    if notice.send_notification && settled_for_user {
+    if notice.send_notification && settled_for_user && user_in_instance {
         let notice = notice.clone();
         let app = app.clone();
         tauri::async_runtime::spawn(async move {
