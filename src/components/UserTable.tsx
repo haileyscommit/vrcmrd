@@ -28,9 +28,10 @@ export default function UserTable() {
         return bTime - aTime;
       })
       .sort((a, b) => {
-        // Sort by advisory level
-        const aLevel = getHighestAdvisoryLevel(a.advisories) ?? 0;
-        const bLevel = getHighestAdvisoryLevel(b.advisories) ?? 0;
+        // Sort by advisory level, but only for users currently in-world (leaveTime === null)
+        // TODO: make this a preference
+        const aLevel = a.leaveTime === null ? getHighestAdvisoryLevel(a.advisories) ?? 0 : 0;
+        const bLevel = b.leaveTime === null ? getHighestAdvisoryLevel(b.advisories) ?? 0 : 0;
         return bLevel - aLevel;
       })
       .sort((a, b) => {
