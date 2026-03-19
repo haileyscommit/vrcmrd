@@ -11,6 +11,7 @@ export default function defaultAdvisory(): Advisory {
         created_by: null,
         updated_by: null,
         active: false,
+        private: false,
         condition: {"type": "AllOf", "data": []},
         send_notification: false,
         send_tts: false,
