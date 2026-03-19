@@ -22,9 +22,11 @@ export default function AdvisoryEditor({ advisory, isNew, setOverlay, setDialog 
   const [messageTemplate, setMessageTemplate] = useState(advisory.message_template);
   const [level, setLevel] = useState(advisory.level);
   const [active, setActive] = useState(advisory.active);
+  const [privateAdvisory, setPrivateAdvisory] = useState(advisory.private);
   const [sendNotification, setSendNotification] = useState(advisory.send_notification);
   const [sendTts, setSendTts] = useState(advisory.send_tts);
   const [condition, setCondition] = useState(advisory.condition);
+  const [tags, setTags] = useState(advisory.tags);
   return <div class="select-none h-full w-full p-2"><div class="max-w-3xl ml-auto flex flex-col bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 h-full w-full px-6 py-2 rounded shadow-lg">
     <div class="w-full flex flex-row mb-4 gap-2 items-center">
       <button class="inline-block bg-transparent hover:bg-black/20 hover:dark:bg-white/20 text-white transition rounded-full p-2 m-2" onClick={() => setOverlay?.(null)} aria-label="Close"><CloseIcon /></button>
@@ -91,6 +93,15 @@ export default function AdvisoryEditor({ advisory, isNew, setOverlay, setDialog 
         </div>
         <p class="mb-2 text-sm text-gray-600 dark:text-gray-400">The message that will be shown or spoken when this advisory is applied. You can use variables like <code>{'{{:variable||default:}}'}</code> to include specific context.</p>
       </div>
+      <div class="my-4 flex flex-col gap-2">
+        {/* Tags: turn into chips when a comma is inserted (like email addresses in a Gmail "To" box) */}
+        <label class="font-bold" for="advisory-tags-input">Tags (comma-separated):</label>
+        <input id="advisory-tags-input" type="text" class="w-full p-2 border border-gray-300 dark:border-gray-700 rounded" value={tags.join(",")} onInput={(e) => setTags((e.target as HTMLInputElement).value.split(",").map(tag => tag.trim()))} />
+      </div>
+      <div class="my-4 flex items-center gap-2">
+        <input id="private-advisory-input" type="checkbox" checked={privateAdvisory} onChange={(e) => setPrivateAdvisory((e.target as HTMLInputElement).checked)} />
+        <label class="font-bold" for="private-advisory-input">Do not send notices to joining clients while in host mode</label>
+      </div>
       <div class="my-4 flex items-center gap-2">
         <input id="send-notification-input" type="checkbox" checked={sendNotification} onChange={(e) => setSendNotification((e.target as HTMLInputElement).checked)} />
         <label class="font-bold" for="send-notification-input">Send desktop, XSOverlay, or OVR Toolkit notification</label>
@@ -102,7 +113,7 @@ export default function AdvisoryEditor({ advisory, isNew, setOverlay, setDialog 
       <div class="mt-6 flex flex-row gap-4 justify-end">
         {/* <button class="px-4 py-2 hover:bg-gray-200 dark:hover:bg-gray-700 text-white rounded" onClick={() => setOverlay?.(null)}>Cancel</button>*/}
         <button class="px-4 py-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded" onClick={() => {
-          const updatedAdvisory: Advisory = { ...advisory, active, name, message_template: messageTemplate, level, send_notification: sendNotification, send_tts: sendTts, condition };
+          const updatedAdvisory: Advisory = { ...advisory, active, name, message_template: messageTemplate, level, send_notification: sendNotification, send_tts: sendTts, private: privateAdvisory, tags, condition };
           invoke(isNew ? "add_advisory" : "update_advisory", { advisory: updatedAdvisory }).then(() => {
             setOverlay?.(null);
           });

@@ -102,6 +102,9 @@ pub struct Advisory {
     /// Custom tags to filter the advisory in the advisory list UI.
     pub tags: Vec<String>,
     pub active: bool,
+    /// If this advisory is private, it will not be included in the list of advisories sent to joining clients while in host mode.
+    #[serde(default)] // new field introduced at some point
+    pub private: bool,
     pub created_at: String,
     pub updated_at: String,
     // TODO: attribution -- how to reliably identify users?

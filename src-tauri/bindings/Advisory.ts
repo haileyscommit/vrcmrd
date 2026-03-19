@@ -31,7 +31,11 @@ condition: AdvisoryCondition,
 /**
  * Custom tags to filter the advisory in the advisory list UI.
  */
-tags: Array<string>, active: boolean, created_at: string, updated_at: string, created_by: string | null, updated_by: string | null, 
+tags: Array<string>, active: boolean, 
+/**
+ * If this advisory is private, it will not be included in the list of advisories sent to joining clients while in host mode.
+ */
+private: boolean, created_at: string, updated_at: string, created_by: string | null, updated_by: string | null, 
 /**
  * Whether to send a notification via XSOverlay, OVR Toolkit, or
  * desktop notifications when this advisory matches.
