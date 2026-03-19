@@ -136,6 +136,20 @@ pub async fn update_advisory(app: tauri::AppHandle<Wry>, advisory: Advisory) -> 
     Ok(())
 }
 
+#[tauri::command]
+pub async fn get_known_advisory_tags(app: tauri::AppHandle<Wry>) -> Result<Vec<String>, String> {
+    let advisory_memory = app.state::<Mutex<AdvisoryMemory>>();
+    let advisory_memory = advisory_memory.lock();
+    let mut tags = advisory_memory
+        .all_advisories
+        .iter()
+        .flat_map(|a| a.tags.clone())
+        .collect::<Vec<String>>();
+    tags.sort();
+    tags.dedup();
+    Ok(tags)
+}
+
 pub fn apply_templating(
     template: &str,
     variables: &std::collections::HashMap<&str, String>,

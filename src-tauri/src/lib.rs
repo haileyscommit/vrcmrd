@@ -59,6 +59,7 @@ pub fn run() {
             advisories::get_advisory,
             advisories::update_advisory,
             advisories::remove_advisory,
+            advisories::get_known_advisory_tags,
             notices::get_all_notices,
         ])
         .setup(|app| {

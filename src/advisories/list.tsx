@@ -42,16 +42,40 @@ export default function AdvisoryList({ setOverlay, setDialog }: {
     }
     // TODO: support negative search (e.g. "active -private" to find active advisories that aren't private)
     return search(filter, advisories, {
-      ignoreCase: true, 
+      ignoreCase: true,
+      threshold: 0.4,
       keySelector: (advisory) => `${advisory.name} ${advisory.message_template} ${autoTags(advisory).join(" ")}`,
     });
+  }, [filter, advisories]);
+
+  const suggestedTags = useMemo(() => {
+    const tagSet = new Set<string>();
+    advisories.forEach((advisory) => {
+      advisory.tags.forEach((tag) => tagSet.add(tag));
+      if (advisory.active) tagSet.add("active");
+      if (advisory.private) tagSet.add("private");
+      const conditions = NestedConditionTypes(advisory.condition);
+      conditions.forEach((condition) => tagSet.add(condition));
+    });
+    // now, fuzzy sort the tags by how closely they match the filter
+    const tags = Array.from(tagSet);
+    if (filter) {
+      const lastWord = filter.split(" ").slice(-1)[0];
+      tags.sort((a, b) => fuzzy(lastWord, b) - fuzzy(lastWord, a));
+    }
+    return tags;
   }, [filter, advisories]);
 
   return <div class="flex flex-col gap-4">
     <input id="filter-input" type="text" placeholder="Filter advisories by name or tag..." class="p-2 border border-gray-300 dark:border-gray-700 rounded" onInput={(e) => {
       const filter = (e.target as HTMLInputElement).value.toLowerCase();
       filter ? setFilter(filter) : setFilter("");
-    }} />
+    }} list="tag-suggestions" />
+    <datalist id="tag-suggestions">
+      {suggestedTags.map((tag) => (
+      <option key={tag} value={filter.split(" ").slice(0, -1).join(" ") + (filter.split(" ").slice(0, -1).length > 0 ? " " : "") + tag}></option>
+      ))}
+    </datalist>
     {filtered.map((advisory) => (
       <div key={advisory.id} class="p-4 border border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded"
       onClick={(_) => {
