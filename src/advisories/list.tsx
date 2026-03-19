@@ -32,6 +32,7 @@ export default function AdvisoryList({ setOverlay, setDialog }: {
 
   const filtered = useMemo(() => {
     if (!filter) return advisories;
+    if (filter.startsWith("vrcmrd_adv_")) return advisories.filter((advisory) => advisory.id === filter);
     function autoTags(advisory: Advisory): string[] {
       const tags = [...advisory.tags];
       if (advisory.active) tags.push("active");
