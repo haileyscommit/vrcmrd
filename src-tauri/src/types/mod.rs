@@ -21,6 +21,7 @@ pub struct VrcMrdUser {
     pub leave_time: Option<i64>,      // e.g. "13:24"
     pub advisories: Vec<advisories::ActiveAdvisory>,
     pub age_verified: bool,
+    pub recently_kicked: bool,
     pub platform: Option<String>,
     pub trust_rank: Option<user::TrustRank>,
     pub groups: Vec<PartialGroup>,

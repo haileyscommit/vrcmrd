@@ -14,6 +14,7 @@ export type User = {
   advisories: ActiveAdvisory[];
   ageVerified: boolean;
   platform: Platform | null;
+  recentlyKicked: boolean;
   trustRank?: TrustRank;
 };
 
@@ -57,7 +58,8 @@ export const users: User[] = [
     advisories: [],
     ageVerified: true,
     platform: 'pc',
-    trustRank: 'TrustedUser'
+    trustRank: 'TrustedUser',
+    recentlyKicked: false,
   },
   {
     id: 'u2',
@@ -69,7 +71,9 @@ export const users: User[] = [
     leaveTime: 7320,
     advisories: [],
     ageVerified: true,
-    platform: 'android'
+    platform: 'android',
+    trustRank: 'User',
+    recentlyKicked: false,
   },
   {
     id: 'u3',
@@ -81,7 +85,9 @@ export const users: User[] = [
     leaveTime: 7230,
     advisories: [],
     ageVerified: false,
-    platform: 'ios'
+    platform: 'ios',
+    trustRank: 'NewUser',
+    recentlyKicked: false,
   },
   {
     id: 'u4',
@@ -93,7 +99,9 @@ export const users: User[] = [
     leaveTime: 7555,
     advisories: [],
     ageVerified: false,
-    platform: 'pc'
+    platform: 'pc',
+    trustRank: 'Nuisance',
+    recentlyKicked: true,
   },
   {
     id: 'u5',
@@ -105,6 +113,8 @@ export const users: User[] = [
     leaveTime: 7822,
     advisories: [],
     ageVerified: true,
-    platform: 'ios'
+    platform: 'ios',
+    trustRank: 'KnownUser',
+    recentlyKicked: false,
   }
 ];

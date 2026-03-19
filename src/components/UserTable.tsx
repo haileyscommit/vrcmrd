@@ -9,6 +9,7 @@ import InfoOutlineIcon from "mdi-preact/InformationOutlineIcon";
 import InfoFilledIcon from "mdi-preact/InformationIcon";
 import ErrorIcon from "mdi-preact/AlertIcon";
 import StopIcon from "mdi-preact/AlertOctagonIcon";
+import AccountRemoveIcon from "mdi-preact/AccountRemoveIcon";
 import { useEffect, useState } from 'preact/hooks';
 import { listen } from '@tauri-apps/api/event';
 import { menu } from '@tauri-apps/api';
@@ -207,6 +208,12 @@ export default function UserTable() {
                         4: <StopIcon class="w-5 h-5 text-red-400" />,
                       }[getHighestAdvisoryLevel(u.advisories) ?? 0]}
                       {/* Show advisory message if only one at highest level */}
+                    </div>
+                  )}
+                  
+                  {u.recentlyKicked && ( // TODO: show if user has been recently kicked from the group hosting the current instance
+                    <div data-tooltip-id="tooltip" data-tooltip-content="Recently kicked">
+                      <AccountRemoveIcon class="w-5 h-5 text-orange-400" />
                     </div>
                   )}
 

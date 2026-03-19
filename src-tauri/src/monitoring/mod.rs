@@ -3,6 +3,7 @@ pub mod instance;
 mod join_leave;
 mod path;
 mod file_analysis;
+mod kick;
 
 use std::{
     env,
@@ -252,6 +253,11 @@ pub fn start_monitoring_logfiles(app: tauri::AppHandle) {
                 Ok(true) => continue, // handled
                 Ok(false) => {}
                 Err(e) => eprintln!("Error handling file analysis request: {:?}", e),
+            }
+            match kick::handle_kick(app_clone.clone(), &evt) {
+                Ok(true) => continue, // handled
+                Ok(false) => {}
+                Err(e) => eprintln!("Error handling kick event: {:?}", e),
             }
         }
         println!("Monitor stopped and channel closed.");
