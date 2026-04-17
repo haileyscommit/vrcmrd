@@ -4,7 +4,7 @@ use parking_lot::Mutex;
 use tauri::{AppHandle, Emitter, Manager};
 
 /// Searches for avatars using third-party APIs (same as VRCX uses).
-use crate::{api::VrchatApiStateMutex, memory::users::Users, types::{VrcMrdUser, avatar::{AvatarBundleFileMetadata, GetWorstRank, PerfRank, VrcxAvatarSearchResult}}};
+use crate::{api::{VRCHAT_API_USERAGENT, VrchatApiStateMutex}, memory::users::Users, types::{VrcMrdUser, avatar::{AvatarBundleFileMetadata, GetWorstRank, PerfRank, VrcxAvatarSearchResult}}};
 
 // TODO: use a setting to get the list, and use this hardcoded list as the default instead
 const AVATAR_API_BASE_URLS: [&str; 4] = [
@@ -66,7 +66,7 @@ pub async fn search_avatar_by_file(file_id: &str, client: reqwest_middleware::Cl
     for base_url in AVATAR_API_BASE_URLS_SUPPORTING_FILEID.iter() {
         let url = format!("{}?fileId={}", base_url, file_id);
         println!("Searching for avatar with file ID '{}' at '{}'", file_id, url);
-        match client.get(&url).send().await {
+        match client.get(&url).header("User-Agent", VRCHAT_API_USERAGENT).send().await {
             Ok(response) => {
                 if response.status().is_success() {
                     match response.json::<Vec<VrcxAvatarSearchResult>>().await {
@@ -106,7 +106,7 @@ pub async fn search_avatar_by_file(file_id: &str, client: reqwest_middleware::Cl
 pub async fn search_avatar_by_name(query: &str, client: reqwest_middleware::ClientWithMiddleware) -> Result<Vec<VrcxAvatarSearchResult>, String> {
     for base_url in AVATAR_API_BASE_URLS.iter() {
         let url = format!("{}?search={}", base_url, query);
-        match client.get(&url).send().await {
+        match client.get(&url).header("User-Agent", VRCHAT_API_USERAGENT).send().await {
             Ok(response) => {
                 if response.status().is_success() {
                     match response.json::<Vec<VrcxAvatarSearchResult>>().await {
@@ -151,7 +151,7 @@ pub async fn search_avatar_by_author(owner_id: &str, query: Option<&str>, client
         };
         #[cfg(debug_assertions)]
         println!("Searching for avatar with author ID '{}' at '{}'", owner_id, url);
-        match client.get(&url).send().await {
+        match client.get(&url).header("User-Agent", VRCHAT_API_USERAGENT).send().await {
             Ok(response) => {
                 if response.status().is_success() {
                     match response.json::<Vec<VrcxAvatarSearchResult>>().await {
