@@ -5,7 +5,7 @@ import AdvisoryEditor from "./editor";
 import { listen } from "@tauri-apps/api/event";
 import { fuzzy, search } from "fast-fuzzy";
 import { NestedConditionTypes } from "./condition";
-import { NestedGroupConditionTypes, NestedGroupConditionTypesAlt } from "./condition_group";
+import { NestedGroupConditionTypesAlt } from "./condition_group";
 
 export default function AdvisoryList({ setOverlay, setDialog }: {
   setOverlay?: (overlay: preact.VNode|null) => void,

@@ -2,7 +2,6 @@ import { AdvisoryGroupCondition } from "@app/bindings/AdvisoryGroupCondition";
 import DeleteIcon from "mdi-preact/DeleteIcon";
 import Dropdown from "../components/Dropdown";
 import { AdvisoryCondition } from "@app/bindings/AdvisoryCondition";
-import { NestedConditionTypes } from "./condition";
 
 export default function GroupConditionEditor({ condition, setCondition, removeCondition }: { 
   condition: AdvisoryGroupCondition,
