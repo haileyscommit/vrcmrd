@@ -57,21 +57,20 @@ export default function App() {
       <Menubar />
       <Tabs
         tabs={[
-          { id: "in-world", label: "In World", content: <UserTable /> },
+          { id: "in-world", label: "Users", content: <UserTable /> },
+          { id: "in-world-items", label: "Spawned", content: <>A list of currently and recently spawned items and info about them might show up here.</> },
           {
-            id: "tickets",
-            label: "Tickets",
+            id: "notices",
+            label: "Notices",
             content: (
-              <div className="text-sm text-gray-600 dark:text-gray-300">
-                This is where your active mod-action tickets will appear.
-              </div>
+              <NoticesList />
             ),
           },
           {
-            id: "events",
-            label: "History",
+            id: "log",
+            label: "Log",
             content: (
-              <NoticesList />
+              <>A log might render in here, of every event that has happened</>
             ),
           },
           { id: "blocking-mods", label: "Blocking Mods", content: <BlockingModsTable /> },
