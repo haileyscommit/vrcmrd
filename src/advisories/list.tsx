@@ -5,6 +5,7 @@ import AdvisoryEditor from "./editor";
 import { listen } from "@tauri-apps/api/event";
 import { fuzzy, search } from "fast-fuzzy";
 import { NestedConditionTypes } from "./condition";
+import { NestedGroupConditionTypes, NestedGroupConditionTypesAlt } from "./condition_group";
 
 export default function AdvisoryList({ setOverlay, setDialog }: {
   setOverlay?: (overlay: preact.VNode|null) => void,
@@ -57,6 +58,8 @@ export default function AdvisoryList({ setOverlay, setDialog }: {
       if (advisory.private) tagSet.add("private");
       const conditions = NestedConditionTypes(advisory.condition);
       conditions.forEach((condition) => tagSet.add(condition));
+      const groupConditions = NestedGroupConditionTypesAlt(advisory.condition);
+      groupConditions.forEach((condition) => tagSet.add(condition));
     });
     // now, fuzzy sort the tags by how closely they match the filter
     const tags = Array.from(tagSet);

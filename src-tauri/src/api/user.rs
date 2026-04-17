@@ -8,7 +8,7 @@ use vrchatapi::models::LimitedUserInstance;
 
 use crate::{
     advisories::apply_templating, api::avatar_search::update_avatar, memory::{advisories::AdvisoryMemory, users::Users}, notices::publish_notice, types::{
-        PartialGroup, VrcMrdUser, advisories::{ActiveAdvisory, AdvisoryCondition, make_notice}, user::{CommonUser, GetTrustRank}
+        PartialGroup, VrcMrdUser, advisories::{ActiveAdvisory, AdvisoryCondition, AdvisoryGroupCondition, make_notice}, user::{CommonUser, GetTrustRank}
     }
 };
 
@@ -62,6 +62,7 @@ pub async fn query_user_info(app: AppHandle, user_id: &str) {
                     groups.iter().map(|v| PartialGroup {
                         id: v.clone().group_id.unwrap_or_default(),
                         name: v.clone().name.unwrap_or(v.clone().group_id.unwrap_or_default()),
+                        owner_id: v.clone().owner_id.unwrap_or_default(),
                     }).collect()
                 }
                 _ => {
@@ -214,6 +215,40 @@ impl VrcMrdUser {
                                 .insert("group_name", group.name.clone());
                             return true;
                         }
+                    return false;
+                }
+                AdvisoryCondition::GroupCondition(condition) => {
+                    if self.groups.is_empty() && advisories.iter().any(|a| a.id == advisory.id) {
+                        // if the advisory is already active and groups are not available, assume the user is
+                        // still in the group.
+                        keep.borrow_mut().push(advisory.id.clone());
+                        return true;
+                    }
+                    fn evaluator(group: &PartialGroup, condition: AdvisoryGroupCondition, advisories: &Vec<ActiveAdvisory>, advisory_id: &String) -> bool {
+                        match condition {
+                            AdvisoryGroupCondition::NameContains(string) => group.name.to_lowercase().contains(&string.to_lowercase()),
+                            AdvisoryGroupCondition::OwnerIs(owner_id) => group.owner_id == owner_id,
+                            AdvisoryGroupCondition::Id(id) => group.id == id,
+                            _ => {
+                                println!(
+                                    "Advisory group condition not implemented in user advisory evaluation: {:?}",
+                                    condition
+                                );
+                                advisories.iter().any(|a| a.id == *advisory_id)
+                            }
+                        }
+                    }
+                    for group in self.groups.iter() {
+                        if condition.evaluate(&|condition: AdvisoryGroupCondition| evaluator(group, condition.clone(), &advisories, &advisory.id)) {
+                            // Apply group details to variables
+                            *relevant_group_id.borrow_mut() = Some(group.id.clone());
+                            templates.borrow_mut().insert("group_id", group.id.clone());
+                            templates
+                                .borrow_mut()
+                                .insert("group_name", group.name.clone());
+                            return true;
+                        }
+                    }
                     return false;
                 }
                 AdvisoryCondition::AccountAgeAtMostDays(days) => {

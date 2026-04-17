@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::types::avatar::PerfRank;
 pub mod advisories;
+pub mod advisories_groups;
 mod instance_id;
 pub mod user;
 pub mod xsoverlay;
@@ -38,6 +39,7 @@ impl VrcMrdUser {
 pub struct PartialGroup {
     pub id: String,
     pub name: String,
+    pub owner_id: String,
 }
 
 /* References:

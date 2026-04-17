@@ -11,6 +11,7 @@ import { useState } from "preact/compat";
 import ConditionEditor, { NestedConditionTypes } from "./condition";
 import Dropdown from "../components/Dropdown";
 import PlusIcon from "mdi-preact/PlusIcon";
+import { NestedGroupConditionTypesAlt } from "./condition_group";
 
 export default function AdvisoryEditor({ advisory, isNew, setOverlay, setDialog }: { 
   advisory: Advisory,
@@ -82,7 +83,8 @@ export default function AdvisoryEditor({ advisory, isNew, setOverlay, setDialog 
             const insert = "{{:account_age_days:}}";
             setMessageTemplate(messageTemplate + insert);
           }}><PlusIcon class="inline align-middle w-4 h-4 mr-1 mb-1" />Account Age (days)</button>}
-          {(NestedConditionTypes(condition).includes("IsGroupMember") || NestedConditionTypes(condition).includes("InGroupNameContains")) && <button class="px-2 py-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full text-sm hover:bg-gray-300 dark:hover:bg-gray-600" onClick={() => {
+          {(NestedConditionTypes(condition).includes("IsGroupMember") || NestedConditionTypes(condition).includes("InGroupNameContains") 
+          || NestedGroupConditionTypesAlt(condition).includes("NameContains")) && <button class="px-2 py-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full text-sm hover:bg-gray-300 dark:hover:bg-gray-600" onClick={() => {
             const insert = "{{:group_name:}}";
             setMessageTemplate(messageTemplate + insert);
           }}><PlusIcon class="inline align-middle w-4 h-4 mr-1 mb-1" />Group Name</button>}

@@ -4,6 +4,7 @@ import Dropdown from "../components/Dropdown";
 import MonitorIcon from "mdi-preact/MonitorIcon";
 import AndroidIcon from "mdi-preact/AndroidIcon";
 import AppleIcon from "mdi-preact/AppleIcon";
+import GroupConditionEditor from "./condition_group";
 
 export default function ConditionEditor({ condition, setCondition, removeCondition }: { 
   condition: AdvisoryCondition,
@@ -25,6 +26,7 @@ export default function ConditionEditor({ condition, setCondition, removeConditi
       {active: condition.type === "AllOf", set: () => setCondition({type: "AllOf", data: []}), label: <>All of...</>, description: <>All sub-conditions must be met. (AND between each condition.)</>},
       {active: condition.type === "AnyOf", set: () => setCondition({type: "AnyOf", data: []}), label: <>Any of...</>, description: <>At least one sub-condition must be met. (OR between each condition.)</>},
       {active: condition.type === "Not", set: () => setCondition({type: "Not", data: {data: {type: "AnyOf", data: []}}}), label: <>Not...</>, description: <>The sub-condition must NOT be met. (Inverts the sub-condition.)</>},
+      {active: condition.type === "GroupCondition", set: () => setCondition({type: "GroupCondition", data: {type: "None"}}), label: <>Group matching condition...</>, description: <>The condition applies to each group the user is in, and if any group meets the condition, the user matches.</>},
       {active: condition.type === "UsernameContains", set: () => setCondition({type: "UsernameContains", data: ""}), label: <>Username contains</>},
       {active: condition.type === "AccountAgeAtMostDays", set: () => setCondition({type: "AccountAgeAtMostDays", data: 0}), label: <>Account age</>},
       {active: condition.type === "AvatarMayBe", set: () => setCondition({type: "AvatarMayBe", data: ""}), label: <>Avatar</>, description: <>One of a list of possibly-equipped avatars</>},
@@ -34,15 +36,15 @@ export default function ConditionEditor({ condition, setCondition, removeConditi
       {active: condition.type === "PlatformIs", set: () => setCondition({type: "PlatformIs", data: ""}), label: <>Platform</>},
       {active: condition.type === "TrustRankAtMost", set: () => setCondition({type: "TrustRankAtMost", data: "Nuisance"}), label: <>Max trust rank</>},
       {active: condition.type === "InstanceGroupRestricted", set: () => setCondition({type: "InstanceGroupRestricted", data: null}), label: <>Group-only or Group+ Instance</>},
-      {active: condition.type === "InGroupNameContains", set: () => setCondition({type: "InGroupNameContains", data: ""}), label: <>In group name contains</>, description: <>Users who are in a group with a name containing this string. Useful to discover crasher groups.</>},
+      {active: condition.type === "InGroupNameContains", deprecated: true, set: () => setCondition({type: "InGroupNameContains", data: ""}), label: <>In group name contains</>, description: <>Users who are in a group with a name containing this string. Useful to discover crasher groups.</>},
       {active: condition.type === "InstanceOwner", set: () => setCondition({type: "InstanceOwner", data: ""}), label: <>In instance owned by</>, description: <>The owner of the instance. Either a user or a group.</>},
       // {active: condition.type === "LogLinePrefix", set: () => setCondition({type: "LogLinePrefix", data: ""}), label: <ConditionName condition="LogLinePrefix" />}
     ]} />
     {removeCondition && <button class="float-end bg-transparent hover:bg-black/20 hover:dark:bg-white/20 text-white hover:text-red-400 transition rounded-full p-2 m-2 mt-0 me-0" onClick={() => removeCondition()}><DeleteIcon /></button>}
     {/* TODO: list of sub-conditions if this is a meta-condition */}
     {/* TODO: field(s) for condition data that appear when certain condition types are selected */}
-    {(condition.type === "AllOf" || condition.type === "AnyOf") ? <div class="mt-4 border border-gray-300 dark:border-gray-700 rounded p-1">
-      <div class="font-semibold mb-2">Sub-Conditions:</div>
+    {(condition.type === "AllOf" || condition.type === "AnyOf") ? <div class="mt-4 border border-gray-300 dark:border-gray-700 rounded p-1"><details open>
+      <summary class="block font-semibold mb-2 ms-4">Sub-Conditions:</summary>
       {(condition.data.length === 0) && <div class="italic text-gray-500">No sub-conditions defined.</div>}
       {condition.data.map((subCondition, index) => (
         <div class="mb-2" key={index}>
@@ -61,13 +63,15 @@ export default function ConditionEditor({ condition, setCondition, removeConditi
         const newData = [...condition.data, {type: "None", data: null} as AdvisoryCondition];
         setCondition({...condition, data: newData});
       }}>Add Sub-Condition</button>
+    </details>
     </div>
-    : condition.type === "Not" ? <div class="mt-4 border border-gray-300 dark:border-gray-700 rounded p-1">
-      <div class="font-semibold mb-2">Sub-Condition:</div>
+    : condition.type === "Not" ? <>
+      <div class="font-semibold mt-4 mb-2">Sub-Condition:</div>
       <ConditionEditor condition={condition.data.data} setCondition={(newSubCondition) => {
         setCondition({...condition, data: {data: newSubCondition}});
       }} />
-    </div>
+    </>
+    : condition.type === "GroupCondition" ? <GroupConditionEditor condition={condition.data} setCondition={(newGroupCondition) => setCondition({...condition, data: newGroupCondition})} />
     // Single-string data conditions
     : stringDataConditionTypes.includes(condition.type) ? <div class="mt-4">
       <label class="block font-semibold mb-1">{ConditionLabel(condition)}</label>

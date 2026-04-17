@@ -3,6 +3,8 @@ use serde_repr::*;
 
 use crate::types::user::TrustRank;
 
+pub use crate::types::advisories_groups::AdvisoryGroupCondition;
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize_repr, Deserialize_repr, ts_rs::TS)]
 #[repr(u8)]
 #[ts(export)]
@@ -139,6 +141,11 @@ pub enum AdvisoryCondition {
     /// The user is in a group whose name contains the given substring (case-insensitive).
     /// Use this to warn of harmful groups that you might not yet know about.
     InGroupNameContains(String),
+    /// The user is in a group that meets the given conditions.
+    /// This is a more-flexible replacement to `InGroupNameContains`.
+    /// The given condition applies to each group the user is in, and if any group meets the
+    /// condition, the user matches.
+    GroupCondition(AdvisoryGroupCondition),
     /// The user's trust rank is lower than or equal to the given trust rank.
     /// Useful to set advisories for visitors or nuisances.
     TrustRankAtMost(TrustRank),
