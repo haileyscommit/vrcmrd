@@ -3,7 +3,7 @@ import Dropdown from "../components/Dropdown";
 import DeleteIcon from "mdi-preact/DeleteIcon";
 import RightIcon from "mdi-preact/ChevronRightIcon";
 import DownIcon from "mdi-preact/ChevronDownIcon";
-import GroupConditionEditor from "./condition_group";
+import GroupConditionEditor from "./condition_group_new";
 import AppleIcon from "mdi-preact/AppleIcon";
 import AndroidIcon from "mdi-preact/AndroidIcon";
 import MonitorIcon from "mdi-preact/MonitorIcon";
@@ -18,7 +18,9 @@ export default function ConditionEditor({ condition, setCondition, removeConditi
     // AllOf -> AnyOf -> Not -> AllOf
     if (condition.type === "AllOf") {
       setCondition({type: "AnyOf", data: condition.data});
-    } else if (condition.type === "AnyOf" && condition.data.length < 2) {
+    } else if (condition.type === "AnyOf" && condition.data.length == 0) {
+      setCondition({type: "Not", data: {data: {type: "None"}}});
+    } else if (condition.type === "AnyOf" && condition.data.length <= 1) {
       setCondition({type: "Not", data: {data: condition.data[0]}});
     } else if (condition.type === "AnyOf") {
       setCondition({type: "AllOf", data: condition.data});
@@ -28,10 +30,10 @@ export default function ConditionEditor({ condition, setCondition, removeConditi
     e.preventDefault();
   }
   if (condition.type === "AllOf" || condition.type === "AnyOf") {
-    return <details class="border border-gray-300 dark:border-gray-700 only:rounded first:rounded-t last:rounded-b not-last:border-b-none p-2 flex flex-col gap-2 items-stretch w-full group" open>
+    return <details class="border border-gray-300 dark:border-gray-700 only:rounded first:rounded-t last:rounded-b not-last:border-b-none p-2 flex flex-col gap-2 items-stretch w-full" open>
       <summary class="flex flex-row gap-2 w-full items-center">
-        <RightIcon class="group-open:hidden cursor-pointer" />
-        <DownIcon class="hidden group-open:inline-block" />
+        <RightIcon class="[details[open]>summary>&]:hidden cursor-pointer" />
+        <DownIcon class="hidden [details[open]>summary>&]:inline-block" />
         {condition.type === "AllOf" 
         ? <span class="cursor-pointer inline-block font-bold text-sm border rounded-full px-2 py-1/2 text-green-400 bg-green-100 dark:bg-green-800 hover:bg-green-200 dark:hover:bg-green-700 border-green-400" onClick={cycleConditionType}>All of</span> 
         : <span class="cursor-pointer inline-block font-bold text-sm border rounded-full px-2 py-1/2 text-blue-400 bg-blue-100 dark:bg-blue-800 hover:bg-blue-200 dark:hover:bg-blue-700 border-blue-400" onClick={cycleConditionType}>Any of</span>}
@@ -52,10 +54,10 @@ export default function ConditionEditor({ condition, setCondition, removeConditi
       <NewCondition setCondition={(newCondition) => setCondition({...condition, data: [...condition.data, newCondition]})} />
     </details>
   } else if (condition.type === "Not") {
-    return <details class="border border-gray-300 dark:border-gray-700 only:rounded first:rounded-t last:rounded-b not-last:border-b-0 p-2 flex flex-col gap-2 items-stretch w-full group" open>
+    return <details class="border border-gray-300 dark:border-gray-700 only:rounded first:rounded-t last:rounded-b not-last:border-b-0 p-2 flex flex-col gap-2 items-stretch w-full" open>
       <summary class="flex flex-row gap-2 w-full items-center">
-        <RightIcon class="group-open:hidden cursor-pointer" />
-        <DownIcon class="hidden group-open:inline-block" />
+        <RightIcon class="[details[open]>summary>&]:hidden cursor-pointer" />
+        <DownIcon class="hidden [details[open]>summary>&]:inline-block" />
         <span class="cursor-pointer font-bold text-sm border rounded-full px-2 py-1/2 text-red-400 bg-red-100 dark:bg-red-800 hover:bg-red-200 dark:hover:bg-red-700 border-red-400" onClick={cycleConditionType}>Not</span>
         <span class="flex-grow" />
         <RemoveConditionButton onClick={removeCondition} setCondition={setCondition} />
@@ -114,16 +116,18 @@ export default function ConditionEditor({ condition, setCondition, removeConditi
       <RemoveConditionButton onClick={removeCondition} setCondition={setCondition} />
     </div>
   } else if (condition.type === "GroupCondition") {
-    // TODO: revisit this when the group condition editor is redesigned
-    // (I think I want to add a colored banner to the sidebar so that the group-advisory context is a bit more obvious)
-    return <div class="border border-gray-300 dark:border-gray-600 only:rounded first:rounded-t last:rounded-b not-last:border-b-0 p-2 flex flex-col gap-2 items-stretch w-full">
-      <summary class="flex flex-row gap-2 w-full items-center">
-        <label class="font-bold w-[32ch] overflow-hidden text-wrap my-2">Group conditions</label>
+    return <details class="border border-gray-300 dark:border-gray-700 !border-l-green-400 border-l-4 only:rounded first:rounded-t last:rounded-b not-last:border-b-0 flex flex-col items-stretch w-full" open>
+      <summary class="flex flex-row gap-2 w-full items-center p-2">
+        <RightIcon class="[details[open]>summary>&]:hidden cursor-pointer" />
+        <DownIcon class="hidden [details[open]>summary>&]:inline-block" />
+        <span class="font-bold w-[32ch] overflow-hidden text-wrap my-2">In a group matching this condition</span>
         <span class="flex-grow" />
         <RemoveConditionButton onClick={removeCondition} setCondition={setCondition} />
       </summary>
-      <GroupConditionEditor condition={condition.data} setCondition={(newCondition) => setCondition({...condition, data: newCondition})} removeCondition={removeCondition} />
-    </div>
+      <div class="p-2 group-last:rounded-bl group-only:rounded-bl">
+        <GroupConditionEditor condition={condition.data} setCondition={(newCondition) => setCondition({...condition, data: newCondition})} removeCondition={removeCondition} />
+      </div>
+    </details>
   } else if (condition.type === "AgeNotVerified" || condition.type === "InstanceGroupRestricted") {
     return <div class="border border-gray-300 dark:border-gray-600 only:rounded first:rounded-t last:rounded-b not-last:border-b-0 bg-gray-200 dark:bg-gray-700 p-2 flex flex-row gap-2 items-center w-full">
       <span class="font-bold w-[32ch] overflow-hidden text-wrap">{ConditionLabel(condition)}</span>
@@ -149,7 +153,7 @@ export function NewCondition({ setCondition }: { setCondition: (condition: Advis
       {active: false, set: () => setCondition({type: "AllOf", data: []}), label: <>All of...</>, description: <>All sub-conditions must be met. (AND between each condition.)</>},
       {active: false, set: () => setCondition({type: "AnyOf", data: []}), label: <>Any of...</>, description: <>At least one sub-condition must be met. (OR between each condition.)</>},
       {active: false, set: () => setCondition({type: "Not", data: {data: {type: "None"}}}), label: <>Not...</>, description: <>The sub-condition must NOT be met. (Inverts the sub-condition.)</>},
-      {active: false, set: () => setCondition({type: "GroupCondition", data: {type: "None"}}), label: <>Group matching condition...</>, description: <>The condition applies to each group the user is in, and if any group meets the condition, the user matches.</>},
+      {active: false, set: () => setCondition({type: "GroupCondition", data: {type: "None"}}), label: <>In a group matching condition...</>, description: <>The condition applies to each group the user is in, and if any group meets the condition, the user matches.</>},
       {active: false, set: () => setCondition({type: "UsernameContains", data: ""}), label: <>Username contains</>},
       {active: false, set: () => setCondition({type: "StatusContains", data: ""}), label: <>Status contains</>},
       {active: false, set: () => setCondition({type: "PronounContains", data: ""}), label: <>Pronouns contain</>},
@@ -185,10 +189,9 @@ export const ConditionLabel = (condition: AdvisoryCondition) => {
 
 export const ConditionInputTip = (condition: AdvisoryCondition) => {
   switch (condition.type) {
-    case "AvatarMayBe": return <>Avatar ID</>;
-    case "IsGroupMember": return <>Group ID</>;
-    case "InstanceOwner": return <>User or group ID</>;
-    case "AccountAgeAtMostDays": return <>Number of days</>;
+    case "AvatarMayBe": return <>Avatar ID (avtr_***)</>;
+    case "IsGroupMember": return <>Group ID (grp_***)</>;
+    case "InstanceOwner": return <>User or group ID (usually usr_*** or grp_***)</>;
     default: return null;
   }
 }
