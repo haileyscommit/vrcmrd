@@ -196,9 +196,9 @@ export const ConditionInputTip = (condition: AdvisoryCondition) => {
   }
 }
 
-function htmlescape(str: string) {
-  return ((str||"null").toString()).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-} 
+// function htmlescape(str: string) {
+//   return ((str||"null").toString()).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+// } 
 
 export function NestedConditionTypes(condition: AdvisoryCondition): string[] {
   let types: string[] = [condition.type];
