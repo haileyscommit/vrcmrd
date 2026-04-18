@@ -9,7 +9,7 @@ import ErrorIcon from "mdi-preact/AlertIcon";
 import StopIcon from "mdi-preact/AlertOctagonIcon";
 import { useState } from "preact/compat";
 import { NestedConditionTypes } from "./condition";
-import ConditionEditor from "./condition_new";
+import ConditionEditor from "./condition";
 import Dropdown from "../components/Dropdown";
 import PlusIcon from "mdi-preact/PlusIcon";
 import { NestedGroupConditionTypesAlt } from "./condition_group";
@@ -18,7 +18,7 @@ export default function AdvisoryEditor({ advisory, isNew, setOverlay, setDialog 
   advisory: Advisory,
   isNew?: boolean,
   setOverlay?: (overlay: preact.VNode|null) => void,
-   setDialog?: (dialog: preact.VNode|null) => void
+  setDialog?: (dialog: preact.VNode|null) => void
 }) {
   const [name, setName] = useState(advisory.name);
   const [messageTemplate, setMessageTemplate] = useState(advisory.message_template);

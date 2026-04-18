@@ -1,145 +1,201 @@
 import { AdvisoryCondition } from "@app/bindings/AdvisoryCondition";
-import DeleteIcon from "mdi-preact/DeleteIcon";
 import Dropdown from "../components/Dropdown";
-import MonitorIcon from "mdi-preact/MonitorIcon";
-import AndroidIcon from "mdi-preact/AndroidIcon";
-import AppleIcon from "mdi-preact/AppleIcon";
+import DeleteIcon from "mdi-preact/DeleteIcon";
+import RightIcon from "mdi-preact/ChevronRightIcon";
+import DownIcon from "mdi-preact/ChevronDownIcon";
 import GroupConditionEditor from "./condition_group";
+import AppleIcon from "mdi-preact/AppleIcon";
+import AndroidIcon from "mdi-preact/AndroidIcon";
+import MonitorIcon from "mdi-preact/MonitorIcon";
 
 export default function ConditionEditor({ condition, setCondition, removeCondition }: { 
   condition: AdvisoryCondition,
   setCondition: (condition: AdvisoryCondition) => void ,
   removeCondition?: (() => void)
 }) {
-  const stringDataConditionTypes = [
-    "UsernameContains",
-    "InGroupNameContains",
-    "AvatarNameContains",
-    "StatusContains",
-    "PronounContains",
-    "AvatarMayBe",
-    "IsGroupMember",
-    "InstanceOwner",
-    "LogLinePrefix"
-  ];
-  return <div class="p-4 border border-gray-300 dark:border-gray-700 rounded">
-    <Dropdown items={[
-      //{active: condition.type === "None", set: () => setCondition({type: "None", data: null}), label: ConditionLabel({type: "None", data: null} as AdvisoryCondition)},
-      {active: condition.type === "AllOf", set: () => setCondition({type: "AllOf", data: []}), label: <>All of...</>, description: <>All sub-conditions must be met. (AND between each condition.)</>},
-      {active: condition.type === "AnyOf", set: () => setCondition({type: "AnyOf", data: []}), label: <>Any of...</>, description: <>At least one sub-condition must be met. (OR between each condition.)</>},
-      {active: condition.type === "Not", set: () => setCondition({type: "Not", data: {data: {type: "AnyOf", data: []}}}), label: <>Not...</>, description: <>The sub-condition must NOT be met. (Inverts the sub-condition.)</>},
-      {active: condition.type === "GroupCondition", set: () => setCondition({type: "GroupCondition", data: {type: "None"}}), label: <>Group matching condition...</>, description: <>The condition applies to each group the user is in, and if any group meets the condition, the user matches.</>},
-      {active: condition.type === "UsernameContains", set: () => setCondition({type: "UsernameContains", data: ""}), label: <>Username contains</>},
-      {active: condition.type === "StatusContains", set: () => setCondition({type: "StatusContains", data: ""}), label: <>Status contains</>},
-      {active: condition.type === "PronounContains", set: () => setCondition({type: "PronounContains", data: ""}), label: <>Pronouns contain</>},
-      {active: condition.type === "AccountAgeAtMostDays", set: () => setCondition({type: "AccountAgeAtMostDays", data: 0}), label: <>Account age</>},
-      {active: condition.type === "AvatarMayBe", set: () => setCondition({type: "AvatarMayBe", data: ""}), label: <>Avatar</>, description: <>One of a list of possibly-equipped avatars</>},
-      {active: condition.type === "AvatarNameContains", set: () => setCondition({type: "AvatarNameContains", data: ""}), label: <>Avatar name contains</>, description: <>Useful to find types of avatar that are commonly used by trolls</>},
-      {active: condition.type === "IsGroupMember", set: () => setCondition({type: "IsGroupMember", data: ""}), label: <>Is member of group</>},
-      {active: condition.type === "AgeNotVerified", set: () => setCondition({type: "AgeNotVerified"}), label: <>Not 18+ age-verified</>, description: <>Users who have not ID-verified with VRChat</>},
-      {active: condition.type === "PlatformIs", set: () => setCondition({type: "PlatformIs", data: ""}), label: <>Platform</>},
-      {active: condition.type === "TrustRankAtMost", set: () => setCondition({type: "TrustRankAtMost", data: "Nuisance"}), label: <>Max trust rank</>},
-      {active: condition.type === "InstanceGroupRestricted", set: () => setCondition({type: "InstanceGroupRestricted", data: null}), label: <>Group-only or Group+ Instance</>},
-      {active: condition.type === "InGroupNameContains", deprecated: true, set: () => setCondition({type: "InGroupNameContains", data: ""}), label: <>In group name contains</>, description: <>Users who are in a group with a name containing this string. Useful to discover crasher groups.</>},
-      {active: condition.type === "InstanceOwner", set: () => setCondition({type: "InstanceOwner", data: ""}), label: <>In instance owned by</>, description: <>The owner of the instance. Either a user or a group.</>},
-      // {active: condition.type === "LogLinePrefix", set: () => setCondition({type: "LogLinePrefix", data: ""}), label: <ConditionName condition="LogLinePrefix" />}
-    ]} />
-    {removeCondition && <button class="float-end bg-transparent hover:bg-black/20 hover:dark:bg-white/20 text-white hover:text-red-400 transition rounded-full p-2 m-2 mt-0 me-0" onClick={() => removeCondition()}><DeleteIcon /></button>}
-    {/* TODO: list of sub-conditions if this is a meta-condition */}
-    {/* TODO: field(s) for condition data that appear when certain condition types are selected */}
-    {(condition.type === "AllOf" || condition.type === "AnyOf") ? <div class="mt-4 border border-gray-300 dark:border-gray-700 rounded p-1"><details open>
-      <summary class="block font-semibold mb-2 ms-4">Sub-Conditions:</summary>
-      {(condition.data.length === 0) && <div class="italic text-gray-500">No sub-conditions defined.</div>}
-      {condition.data.map((subCondition, index) => (
-        <div class="mb-2" key={index}>
-          <ConditionEditor condition={subCondition} setCondition={(newSubCondition) => {
-            const newData = [...condition.data];
-            newData[index] = newSubCondition;
-            setCondition({...condition, data: newData});
-          }} removeCondition={() => {
-            const newData = [...condition.data];
-            newData.splice(index, 1);
-            setCondition({...condition, data: newData});
-          }} />
-        </div>
-      ))}
-      <button class="mt-2 px-3 py-1 bg-blue-600 text-white rounded" onClick={() => {
-        const newData = [...condition.data, {type: "None", data: null} as AdvisoryCondition];
-        setCondition({...condition, data: newData});
-      }}>Add Sub-Condition</button>
+  const singleStringConditions: AdvisoryCondition["type"][] = ["UsernameContains", "StatusContains", "PronounContains", "AvatarMayBe", "AvatarNameContains", "IsGroupMember", "InstanceOwner"];
+  function cycleConditionType(e: Event) {
+    // AllOf -> AnyOf -> Not -> AllOf
+    if (condition.type === "AllOf") {
+      setCondition({type: "AnyOf", data: condition.data});
+    } else if (condition.type === "AnyOf" && condition.data.length == 0) {
+      setCondition({type: "Not", data: {data: {type: "None"}}});
+    } else if (condition.type === "AnyOf" && condition.data.length <= 1) {
+      setCondition({type: "Not", data: {data: condition.data[0]}});
+    } else if (condition.type === "AnyOf") {
+      setCondition({type: "AllOf", data: condition.data});
+    } else if (condition.type === "Not") {
+      setCondition({type: "AllOf", data: [condition.data.data]});
+    }
+    e.preventDefault();
+  }
+  if (condition.type === "AllOf" || condition.type === "AnyOf") {
+    return <details class="border border-gray-300 dark:border-gray-700 only:rounded first:rounded-t last:rounded-b not-last:border-b-none p-2 flex flex-col gap-2 items-stretch w-full" open>
+      <summary class="flex flex-row gap-2 w-full items-center">
+        <RightIcon class="[details[open]>summary>&]:hidden cursor-pointer" />
+        <DownIcon class="hidden [details[open]>summary>&]:inline-block" />
+        {condition.type === "AllOf" 
+        ? <span class="cursor-pointer inline-block font-bold text-sm border rounded-full px-2 py-1/2 text-green-400 bg-green-100 dark:bg-green-800 hover:bg-green-200 dark:hover:bg-green-700 border-green-400" onClick={cycleConditionType}>All of</span> 
+        : <span class="cursor-pointer inline-block font-bold text-sm border rounded-full px-2 py-1/2 text-blue-400 bg-blue-100 dark:bg-blue-800 hover:bg-blue-200 dark:hover:bg-blue-700 border-blue-400" onClick={cycleConditionType}>Any of</span>}
+        <span class="flex-grow italic text-sm text-gray-400">{condition.data.length} sub-condition{condition.data.length !== 1 && "s"}</span>
+        <RemoveConditionButton onClick={removeCondition} setCondition={setCondition} />
+      </summary>
+      <div class="mb-2 w-full">
+        {condition.data.map((c, i) => <ConditionEditor key={i} condition={c} setCondition={(newCondition) => {
+          const newConditions = [...condition.data];
+          newConditions[i] = newCondition;
+          setCondition({...condition, data: newConditions});
+        }} removeCondition={() => {
+          const newConditions = [...condition.data];
+          newConditions.splice(i, 1);
+          setCondition({...condition, data: newConditions});
+        }} />)}
+      </div>
+      <NewCondition setCondition={(newCondition) => setCondition({...condition, data: [...condition.data, newCondition]})} />
     </details>
+  } else if (condition.type === "Not") {
+    return <details class="border border-gray-300 dark:border-gray-700 only:rounded first:rounded-t last:rounded-b not-last:border-b-0 p-2 flex flex-col gap-2 items-stretch w-full" open>
+      <summary class="flex flex-row gap-2 w-full items-center">
+        <RightIcon class="[details[open]>summary>&]:hidden cursor-pointer" />
+        <DownIcon class="hidden [details[open]>summary>&]:inline-block" />
+        <span class="cursor-pointer font-bold text-sm border rounded-full px-2 py-1/2 text-red-400 bg-red-100 dark:bg-red-800 hover:bg-red-200 dark:hover:bg-red-700 border-red-400" onClick={cycleConditionType}>Not</span>
+        <span class="flex-grow" />
+        <RemoveConditionButton onClick={removeCondition} setCondition={setCondition} />
+      </summary>
+      <div class="w-full"><ConditionEditor condition={condition.data.data} setCondition={(newCondition) => setCondition({...condition, data: {data: newCondition}})} /></div>
+    </details>
+  } else if (condition.type === "None") {
+    return <div class="w-full flex flex-col gap-2 items-start border border-gray-300 dark:border-gray-700 only:rounded first:rounded-t last:rounded-b not-last:border-b-0 p-4">
+      <span class="font-bold">No condition set</span>
+      <NewCondition setCondition={(newCondition) => setCondition(newCondition)} />
     </div>
-    : condition.type === "Not" ? <>
-      <div class="font-semibold mt-4 mb-2">Sub-Condition:</div>
-      <ConditionEditor condition={condition.data.data} setCondition={(newSubCondition) => {
-        setCondition({...condition, data: {data: newSubCondition}});
-      }} />
-    </>
-    : condition.type === "GroupCondition" ? <GroupConditionEditor condition={condition.data} setCondition={(newGroupCondition) => setCondition({...condition, data: newGroupCondition})} />
-    // Single-string data conditions
-    : stringDataConditionTypes.includes(condition.type) ? <div class="mt-4">
-      <label class="block font-semibold mb-1">{ConditionLabel(condition)}</label>
-      <input 
-        type="text"
-        class="w-full p-2 border border-gray-300 dark:border-gray-700 rounded"
-        value={(condition as any).data as string}
-        onInput={(e) => setCondition({...condition, data: (e.target as HTMLInputElement).value} as any)}
-      />
+  } else if (singleStringConditions.includes(condition.type)) {
+    return <div class="border border-gray-300 dark:border-gray-600 only:rounded first:rounded-t last:rounded-b not-last:border-b-0 bg-gray-200 dark:bg-gray-700 p-2 flex flex-row gap-2 items-start w-full">
+      <label class="font-bold w-[32ch] overflow-hidden text-wrap my-2">{ConditionLabel(condition)}</label>
+      <div class="w-full flex flex-col gap-1/2 flex-grow">
+        {ConditionInputTip(condition) && <span class="text-xs italic text-gray-400">{ConditionInputTip(condition)}</span>}
+        <input type="text" class="w-full bg-transparent border border-gray-300 dark:border-gray-600 rounded p-1 mt-1 flex-grow" value={(condition as any).data} onInput={(e) => setCondition({...condition, data: (e.target as HTMLInputElement).value} as any)} />
+      </div>
+      <RemoveConditionButton onClick={removeCondition} setCondition={setCondition} />
     </div>
-    : condition.type === "TrustRankAtMost" ? <div class="mt-4">
-      <label class="block font-semibold mb-1">{ConditionLabel(condition)}</label>
-      <Dropdown items={[
-        {active: condition.data === "Nuisance", set: () => setCondition({...condition, data: "Nuisance"}), label: <>Nuisance</>},
-        {active: condition.data === "Visitor", set: () => setCondition({...condition, data: "Visitor"}), label: <>Visitor</>},
-        {active: condition.data === "NewUser", set: () => setCondition({...condition, data: "NewUser"}), label: <>New User</>},
-        {active: condition.data === "User", set: () => setCondition({...condition, data: "User"}), label: <>User</>},
-        {active: condition.data === "KnownUser", set: () => setCondition({...condition, data: "KnownUser"}), label: <>Known User</>},
-        {active: condition.data === "TrustedUser", set: () => setCondition({...condition, data: "TrustedUser"}), label: <>Trusted User</>},
-        {active: condition.data === "Admin", set: () => setCondition({...condition, data: "Admin"}), label: <>Admin</>},
-      ]} /> 
-    </div>
-    : condition.type === "PlatformIs" ? <div class="mt-4">
-      <label class="block font-semibold mb-1">{ConditionLabel(condition)}</label>
-      <Dropdown items={[
-        {active: condition.data === "standalonewindows", set: () => setCondition({...condition, data: "standalonewindows"}), label: <><MonitorIcon class="inline-block w-4 h-4 mr-1" />PC</>},
-        {active: condition.data === "android", set: () => setCondition({...condition, data: "android"}), label: <><AndroidIcon class="inline-block w-4 h-4 mr-1" />Android</>},
-        {active: condition.data === "ios", set: () => setCondition({...condition, data: "ios"}), label: <><AppleIcon class="inline-block w-4 h-4 mr-1" />iOS</>},
-      ]} />
-    </div>
-    : condition.type === "AccountAgeAtMostDays" ? <div class="mt-4">
-      <label class="block font-semibold mb-1">{ConditionLabel(condition)}</label>
-      <input 
-        type="number"
-        class="w-full p-2 border border-gray-300 dark:border-gray-700 rounded"
-        value={condition.data as number}
-        onInput={(e) => setCondition({...condition, data: (e.target as HTMLInputElement).valueAsNumber} as any)}
-      />
-    </div>
-    : <pre class="font-mono">{htmlescape(condition.type)}: {htmlescape((condition as any).data)}</pre>}
-  </div>;
-}
-
-function ConditionLabel(condition: AdvisoryCondition) {
-  if (condition.type === "UsernameContains" || condition.type === "InGroupNameContains" || condition.type === "AvatarNameContains" || condition.type === "StatusContains" || condition.type === "PronounContains") {
-    return `Contains:`;
   } else if (condition.type === "AccountAgeAtMostDays") {
-    return `Age (days):`;
-  } else if (condition.type === "AvatarMayBe") {
-    return `Avatar ID (avtr_***):`;
-  } else if (condition.type === "IsGroupMember") {
-    return `Group ID (grp_***):`;
-  } else if (condition.type === "TrustRankAtMost") {
-    return `Highest trust rank:`;
+    return <div class="border border-gray-300 dark:border-gray-600 only:rounded first:rounded-t last:rounded-b not-last:border-b-0 bg-gray-200 dark:bg-gray-700 p-2 flex flex-row gap-2 items-stretch w-full">
+      <label class="font-bold w-[32ch] overflow-hidden text-wrap my-2">{ConditionLabel(condition)}</label>
+      <div class="w-full flex flex-col gap-1/2 flex-grow">
+        <input type="number" class="w-full bg-transparent border border-gray-300 dark:border-gray-600 rounded p-1 mt-1 flex-grow text-end" value={(condition as any).data} onInput={(e) => setCondition({...condition, data: (e.target as HTMLInputElement).value} as any)} />
+      </div>
+      <span class="text-sm italic text-gray-400 self-center mx-2">days</span>
+      <RemoveConditionButton onClick={removeCondition} setCondition={setCondition} />
+    </div>
   } else if (condition.type === "PlatformIs") {
-    return `Platform:`;
-  } else if (condition.type === "InstanceOwner") {
-    return `Instance owner ID (usr_*** or grp_***):`;
-  } else if (condition.type === "LogLinePrefix") {
-    return `Log line starts with:`;
+    return <div class="border border-gray-300 dark:border-gray-600 only:rounded first:rounded-t last:rounded-b not-last:border-b-0 bg-gray-200 dark:bg-gray-700 p-2 flex flex-row gap-2 items-stretch w-full">
+      <label class="font-bold w-[32ch] overflow-hidden text-wrap my-2">{ConditionLabel(condition)}</label>
+      <div class="w-full flex flex-col gap-1/2 flex-grow">
+        <Dropdown class="bg-gray-200 dark:bg-gray-800 rounded" items={[
+          {active: condition.data === "standalonewindows", set: () => setCondition({...condition, data: "standalonewindows"}), label: <><MonitorIcon class="inline-block w-4 h-4 mr-2" />PC<span class="flex-grow" /></>},
+          {active: condition.data === "android", set: () => setCondition({...condition, data: "android"}), label: <><AndroidIcon class="inline-block w-4 h-4 mr-2" />Android<span class="flex-grow" /></>},
+          {active: condition.data === "ios", set: () => setCondition({...condition, data: "ios"}), label: <><AppleIcon class="inline-block w-4 h-4 mr-2" />iOS<span class="flex-grow" /></>},
+        ]} />
+      </div>
+      <RemoveConditionButton onClick={removeCondition} setCondition={setCondition} />
+    </div>
+  } else if (condition.type === "TrustRankAtMost") {
+    return <div class="border border-gray-300 dark:border-gray-600 only:rounded first:rounded-t last:rounded-b not-last:border-b-0 bg-gray-200 dark:bg-gray-700 p-2 flex flex-row gap-2 items-stretch w-full">
+      <label class="font-bold w-[32ch] overflow-hidden text-wrap my-2">{ConditionLabel(condition)}</label>
+      <div class="w-full flex flex-col gap-1/2 flex-grow">
+        <Dropdown class="bg-gray-200 dark:bg-gray-800 rounded" items={[
+          {active: condition.data === "Nuisance", set: () => setCondition({...condition, data: "Nuisance"}), label: <>Nuisance</>},
+          {active: condition.data === "Visitor", set: () => setCondition({...condition, data: "Visitor"}), label: <>Visitor</>},
+          {active: condition.data === "NewUser", set: () => setCondition({...condition, data: "NewUser"}), label: <>New User</>},
+          {active: condition.data === "User", set: () => setCondition({...condition, data: "User"}), label: <>User</>},
+          {active: condition.data === "KnownUser", set: () => setCondition({...condition, data: "KnownUser"}), label: <>Known User</>},
+          {active: condition.data === "TrustedUser", set: () => setCondition({...condition, data: "TrustedUser"}), label: <>Trusted User</>},
+          {active: condition.data === "Admin", set: () => setCondition({...condition, data: "Admin"}), label: <>Admin</>},
+        ]} />
+      </div>
+      <RemoveConditionButton onClick={removeCondition} setCondition={setCondition} />
+    </div>
+  } else if (condition.type === "GroupCondition") {
+    return <details class="border border-gray-300 dark:border-gray-700 !border-l-green-400 border-l-4 only:rounded first:rounded-t last:rounded-b not-last:border-b-0 flex flex-col items-stretch w-full" open>
+      <summary class="flex flex-row gap-2 w-full items-center p-2">
+        <RightIcon class="[details[open]>summary>&]:hidden cursor-pointer" />
+        <DownIcon class="hidden [details[open]>summary>&]:inline-block" />
+        <span class="font-bold w-[32ch] overflow-hidden text-wrap my-2">In a group matching this condition</span>
+        <span class="flex-grow" />
+        <RemoveConditionButton onClick={removeCondition} setCondition={setCondition} />
+      </summary>
+      <div class="p-2 group-last:rounded-bl group-only:rounded-bl">
+        <GroupConditionEditor condition={condition.data} setCondition={(newCondition) => setCondition({...condition, data: newCondition})} removeCondition={removeCondition} />
+      </div>
+    </details>
+  } else if (condition.type === "AgeNotVerified" || condition.type === "InstanceGroupRestricted") {
+    return <div class="border border-gray-300 dark:border-gray-600 only:rounded first:rounded-t last:rounded-b not-last:border-b-0 bg-gray-200 dark:bg-gray-700 p-2 flex flex-row gap-2 items-center w-full">
+      <span class="font-bold w-[32ch] overflow-hidden text-wrap">{ConditionLabel(condition)}</span>
+      {/* <span class="italic text-sm text-gray-400 flex-grow">No editor implemented for this condition type yet.</span> */}
+      <span class="flex-grow" />
+      <RemoveConditionButton onClick={removeCondition} setCondition={setCondition} />
+    </div>
   } else {
-    return "Value:";
+    return <div class="border border-gray-300 dark:border-gray-600 only:rounded first:rounded-t last:rounded-b not-last:border-b-0 bg-gray-200 dark:bg-gray-700 p-2 flex flex-row gap-2 items-center w-full">
+      <span class="font-bold w-[32ch] overflow-hidden text-wrap">{ConditionLabel(condition)}</span>
+      <span class="italic text-sm text-gray-400 flex-grow">No editor implemented for this condition type yet.</span>
+      <RemoveConditionButton onClick={removeCondition} setCondition={setCondition} />
+    </div>
   }
 }
+
+export function RemoveConditionButton({ onClick, setCondition }: { onClick: (() => void) | null | undefined, setCondition: (condition: AdvisoryCondition) => void }) {
+  return <button class="bg-transparent hover:bg-black/20 hover:dark:bg-white/20 text-white hover:text-red-400 transition rounded-full p-2" onClick={() => onClick ? onClick() : setCondition({"type": "None"})}><DeleteIcon /></button>;
+}
+
+export function NewCondition({ setCondition }: { setCondition: (condition: AdvisoryCondition) => void }) {
+  return <Dropdown class="block w-full" label={<>+ Add new condition...</>} items={[
+      {active: false, set: () => setCondition({type: "AllOf", data: []}), label: <>All of...</>, description: <>All sub-conditions must be met. (AND between each condition.)</>},
+      {active: false, set: () => setCondition({type: "AnyOf", data: []}), label: <>Any of...</>, description: <>At least one sub-condition must be met. (OR between each condition.)</>},
+      {active: false, set: () => setCondition({type: "Not", data: {data: {type: "None"}}}), label: <>Not...</>, description: <>The sub-condition must NOT be met. (Inverts the sub-condition.)</>},
+      {active: false, set: () => setCondition({type: "GroupCondition", data: {type: "None"}}), label: <>In a group matching condition...</>, description: <>The condition applies to each group the user is in, and if any group meets the condition, the user matches.</>},
+      {active: false, set: () => setCondition({type: "UsernameContains", data: ""}), label: <>Username contains</>},
+      {active: false, set: () => setCondition({type: "StatusContains", data: ""}), label: <>Status contains</>},
+      {active: false, set: () => setCondition({type: "PronounContains", data: ""}), label: <>Pronouns contain</>},
+      {active: false, set: () => setCondition({type: "AccountAgeAtMostDays", data: 0}), label: <>Account age</>},
+      {active: false, set: () => setCondition({type: "AvatarMayBe", data: ""}), label: <>Avatar</>, description: <>One of a list of possibly-equipped avatars</>},
+      {active: false, set: () => setCondition({type: "AvatarNameContains", data: ""}), label: <>Avatar name contains</>, description: <>Useful to find types of avatar that are commonly used by trolls</>},
+      {active: false, set: () => setCondition({type: "IsGroupMember", data: ""}), label: <>Is member of group</>},
+      {active: false, set: () => setCondition({type: "AgeNotVerified"}), label: <>Not 18+ age-verified</>, description: <>Users who have not ID-verified with VRChat</>},
+      {active: false, set: () => setCondition({type: "PlatformIs", data: ""}), label: <>Platform</>},
+      {active: false, set: () => setCondition({type: "TrustRankAtMost", data: "Nuisance"}), label: <>Max trust rank</>},
+      {active: false, set: () => setCondition({type: "InstanceGroupRestricted", data: null}), label: <>Group-only or Group+ Instance</>},
+      {active: false, set: () => setCondition({type: "InstanceOwner", data: ""}), label: <>In instance owned by</>, description: <>The owner of the instance. Either a user or a group.</>},
+  ]} />
+}
+
+export const ConditionLabel = (condition: AdvisoryCondition) => {
+  switch (condition.type) {
+    case "UsernameContains": return <>Username contains</>;
+    case "StatusContains": return <>Status contains</>;
+    case "PronounContains": return <>Pronouns contain</>;
+    case "AvatarMayBe": return <>Wearing avatar</>;
+    case "AvatarNameContains": return <>Avatar name contains</>;
+    case "IsGroupMember": return <>Is member of group</>;
+    case "InstanceOwner": return <>In instance owned by</>;
+    case "InstanceGroupRestricted": return <>In Group-only or Group+ instance</>;
+    case "AccountAgeAtMostDays": return <>Account age</>;
+    case "PlatformIs": return <>Platform</>;
+    case "TrustRankAtMost": return <>Max trust rank</>;
+    case "AgeNotVerified": return <>Not 18+ age-verified</>;
+    default: return condition.type;
+  }
+}
+
+export const ConditionInputTip = (condition: AdvisoryCondition) => {
+  switch (condition.type) {
+    case "AvatarMayBe": return <>Avatar ID (avtr_***)</>;
+    case "IsGroupMember": return <>Group ID (grp_***)</>;
+    case "InstanceOwner": return <>User or group ID (usually usr_*** or grp_***)</>;
+    default: return null;
+  }
+}
+
 function htmlescape(str: string) {
   return ((str||"null").toString()).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 } 
