@@ -8,7 +8,8 @@ import InfoFilledIcon from "mdi-preact/InformationIcon";
 import ErrorIcon from "mdi-preact/AlertIcon";
 import StopIcon from "mdi-preact/AlertOctagonIcon";
 import { useState } from "preact/compat";
-import ConditionEditor, { NestedConditionTypes } from "./condition";
+import { NestedConditionTypes } from "./condition";
+import ConditionEditor from "./condition_new";
 import Dropdown from "../components/Dropdown";
 import PlusIcon from "mdi-preact/PlusIcon";
 import { NestedGroupConditionTypesAlt } from "./condition_group";
@@ -58,7 +59,9 @@ export default function AdvisoryEditor({ advisory, isNew, setOverlay, setDialog 
         <label class="block mb-2 font-bold" for="advisory-name-input">Advisory Name:</label>
         <input id="advisory-name-input" type="text" class="w-full p-2 border border-gray-300 dark:border-gray-700 rounded" value={name} onInput={(e) => setName((e.target as HTMLInputElement).value)} />
       </div>
-      <ConditionEditor condition={condition} setCondition={setCondition} />
+      <div class="my-4">
+        <ConditionEditor condition={condition} setCondition={setCondition} />
+      </div>
       <div class="my-4 relative">
         <label class="block mb-2 font-bold" for="advisory-level-input">Advisory Level:</label>
         <Dropdown items={[

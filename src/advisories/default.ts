@@ -12,7 +12,7 @@ export default function defaultAdvisory(): Advisory {
         updated_by: null,
         active: false,
         private: false,
-        condition: {"type": "AllOf", "data": []},
+        condition: {"type": "None"},
         send_notification: false,
         send_tts: false,
         tags: [],
