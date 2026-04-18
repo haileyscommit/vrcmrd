@@ -46,6 +46,8 @@ pub fn handle_join_leave(app: AppHandle, line: &VrcLogEntry) -> Result<bool, tau
                     avatar_id: None,
                     avatar_images: vec![],
                     perf_rank: None,
+                    pronouns: None,
+                    status: None,
                     account_created: None,
                     join_time: parse_timestamp(&line.timestamp),
                     leave_time: None,
@@ -103,6 +105,8 @@ pub fn handle_join_leave(app: AppHandle, line: &VrcLogEntry) -> Result<bool, tau
                         avatar_id: None,
                         avatar_images: vec![],
                         perf_rank: None,
+                        pronouns: None,
+                        status: None,
                         account_created: None,
                         join_time: 0, // TODO: store it as a unix timestamp and format on frontend
                         leave_time: Some(leave_time),

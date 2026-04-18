@@ -15,6 +15,8 @@ export default function ConditionEditor({ condition, setCondition, removeConditi
     "UsernameContains",
     "InGroupNameContains",
     "AvatarNameContains",
+    "StatusContains",
+    "PronounContains",
     "AvatarMayBe",
     "IsGroupMember",
     "InstanceOwner",
@@ -28,6 +30,8 @@ export default function ConditionEditor({ condition, setCondition, removeConditi
       {active: condition.type === "Not", set: () => setCondition({type: "Not", data: {data: {type: "AnyOf", data: []}}}), label: <>Not...</>, description: <>The sub-condition must NOT be met. (Inverts the sub-condition.)</>},
       {active: condition.type === "GroupCondition", set: () => setCondition({type: "GroupCondition", data: {type: "None"}}), label: <>Group matching condition...</>, description: <>The condition applies to each group the user is in, and if any group meets the condition, the user matches.</>},
       {active: condition.type === "UsernameContains", set: () => setCondition({type: "UsernameContains", data: ""}), label: <>Username contains</>},
+      {active: condition.type === "StatusContains", set: () => setCondition({type: "StatusContains", data: ""}), label: <>Status contains</>},
+      {active: condition.type === "PronounContains", set: () => setCondition({type: "PronounContains", data: ""}), label: <>Pronouns contain</>},
       {active: condition.type === "AccountAgeAtMostDays", set: () => setCondition({type: "AccountAgeAtMostDays", data: 0}), label: <>Account age</>},
       {active: condition.type === "AvatarMayBe", set: () => setCondition({type: "AvatarMayBe", data: ""}), label: <>Avatar</>, description: <>One of a list of possibly-equipped avatars</>},
       {active: condition.type === "AvatarNameContains", set: () => setCondition({type: "AvatarNameContains", data: ""}), label: <>Avatar name contains</>, description: <>Useful to find types of avatar that are commonly used by trolls</>},
@@ -116,7 +120,7 @@ export default function ConditionEditor({ condition, setCondition, removeConditi
 }
 
 function ConditionLabel(condition: AdvisoryCondition) {
-  if (condition.type === "UsernameContains" || condition.type === "InGroupNameContains" || condition.type === "AvatarNameContains") {
+  if (condition.type === "UsernameContains" || condition.type === "InGroupNameContains" || condition.type === "AvatarNameContains" || condition.type === "StatusContains" || condition.type === "PronounContains") {
     return `Contains:`;
   } else if (condition.type === "AccountAgeAtMostDays") {
     return `Age (days):`;

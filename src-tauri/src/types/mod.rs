@@ -17,6 +17,8 @@ pub struct VrcMrdUser {
     pub avatar_id: Option<String>,
     pub avatar_images: Vec<String>,
     pub perf_rank: Option<PerfRank>,
+    pub pronouns: Option<String>,
+    pub status: Option<String>,
     pub account_created: Option<i64>, // e.g. "3y"
     pub join_time: i64,               // e.g. "13:12"
     pub leave_time: Option<i64>,      // e.g. "13:24"

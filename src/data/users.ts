@@ -7,6 +7,8 @@ export type User = {
   id: string;
   username: string;
   avatarName: string;
+  pronouns: string | null;
+  status: string | null;
   perfRank?: PerformanceRank;
   accountCreated: number | null; // e.g. "3y"
   joinTime: number; // e.g. "13:12"
@@ -52,6 +54,8 @@ export const users: User[] = [
     username: 'NeonSparrow',
     avatarName: 'Neon Sparrow',
     perfRank: 'Excellent',
+    pronouns: null,
+    status: null,
     accountCreated: 4,
     joinTime: 7203,
     leaveTime: 7357,
@@ -66,6 +70,8 @@ export const users: User[] = [
     username: 'PixelPanda',
     avatarName: 'Pixel Panda',
     perfRank: 'Good',
+    pronouns: null,
+    status: null,
     accountCreated: 1,
     joinTime: 7254,
     leaveTime: 7320,
@@ -80,6 +86,8 @@ export const users: User[] = [
     username: 'Skyline',
     avatarName: 'Skyline',
     perfRank: 'Medium',
+    pronouns: null,
+    status: null,
     accountCreated: 5,
     joinTime: 7100,
     leaveTime: 7230,
@@ -94,6 +102,8 @@ export const users: User[] = [
     username: 'Glitch',
     avatarName: 'Glitch',
     perfRank: 'VeryPoor',
+    pronouns: null,
+    status: null,
     accountCreated: 2,
     joinTime: 7475,
     leaveTime: 7555,
@@ -108,6 +118,8 @@ export const users: User[] = [
     username: 'Luma',
     avatarName: 'Luma',
     perfRank: 'Medium',
+    pronouns: null,
+    status: null,
     accountCreated: 0.75,
     joinTime: 7600,
     leaveTime: 7822,

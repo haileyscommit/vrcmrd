@@ -156,6 +156,12 @@ pub enum AdvisoryCondition {
     /// The user's display name contains the given substring (case-insensitive).
     /// Useful to set advisories for ban-evaders or VIPs.
     UsernameContains(String),
+    /// The user's pronouns field contains the given substring (case-insensitive).
+    /// Useful to look out for known-bad pronouns (i.e. slurs).
+    PronounContains(String),
+    /// The user's status field contains the given substring (case-insensitive).
+    /// Useful to look out for known-bad statuses (i.e. slurs).
+    StatusContains(String),
     /// The user does not have their age verified. If you're running an un-gated 18+ instance,
     /// this will let you know who you have to manually verify.
     AgeNotVerified,

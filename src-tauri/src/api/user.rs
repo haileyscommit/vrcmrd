@@ -149,6 +149,8 @@ impl VrcMrdUser {
             avatar_images.push(image);
         }
         self.avatar_images = avatar_images;
+        self.pronouns = user.pronouns.clone().into();
+        self.status = user.status_description.clone().into();
         self.trust_rank = Some(user.trust_rank());
         self.platform = {
             let platform = user.last_platform;
@@ -188,12 +190,24 @@ impl VrcMrdUser {
                 .borrow_mut()
                     .insert("username", self.username.clone());
             if advisory.condition.evaluate(&|condition| match condition {
-                    AdvisoryCondition::UsernameContains(string) => self
-                        .username
+                AdvisoryCondition::UsernameContains(string) => self
+                    .username
+                .to_lowercase()
+                .contains(&string.to_lowercase()),
+                AdvisoryCondition::PronounContains(string) => self
+                    .pronouns
+                    .clone()
+                    .unwrap_or_default()
                     .to_lowercase()
                     .contains(&string.to_lowercase()),
-                    AdvisoryCondition::AgeNotVerified => !self.age_verified,
-                    AdvisoryCondition::TrustRankAtMost(trust_rank) => self.trust_rank.is_some() && self.trust_rank.clone().unwrap() <= trust_rank,
+                AdvisoryCondition::StatusContains(string) => self
+                    .status
+                    .clone()
+                    .unwrap_or_default()
+                    .to_lowercase()
+                    .contains(&string.to_lowercase()),
+                AdvisoryCondition::AgeNotVerified => !self.age_verified,
+                AdvisoryCondition::TrustRankAtMost(trust_rank) => self.trust_rank.is_some() && self.trust_rank.clone().unwrap() <= trust_rank,
                 AdvisoryCondition::PlatformIs(platform) => {
                         self.platform.as_deref().unwrap_or("").to_lowercase() == platform.to_lowercase()
                 }
