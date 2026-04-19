@@ -60,7 +60,7 @@ export default function AdvisoryEditor({ advisory, isNew, setOverlay, setDialog 
         <input id="advisory-name-input" type="text" class="w-full p-2 border border-gray-300 dark:border-gray-700 rounded" value={name} onInput={(e) => setName((e.target as HTMLInputElement).value)} />
       </div>
       <div class="my-4">
-        <ConditionEditor condition={condition} setCondition={setCondition} />
+        <ConditionEditor depth={1} condition={condition} setCondition={setCondition} />
       </div>
       <div class="my-4 relative">
         <label class="block mb-2 font-bold" for="advisory-level-input">Advisory Level:</label>
