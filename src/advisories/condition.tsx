@@ -18,7 +18,7 @@ export default function ConditionEditor({ condition, depth, setCondition, addSib
   addSibling?: (condition: AdvisoryCondition) => void,
   removeCondition?: (() => void)
 }) {
-  const singleStringConditions: AdvisoryCondition["type"][] = ["UsernameContains", "StatusContains", "PronounContains", "AvatarMayBe", "AvatarNameContains", "IsGroupMember", "InstanceOwner"];
+  const singleStringConditions: AdvisoryCondition["type"][] = ["Is", "UsernameContains", "StatusContains", "PronounContains", "AvatarMayBe", "AvatarNameContains", "IsGroupMember", "InstanceOwner"];
   function cycleConditionType(e: Event) {
     // AllOf -> AnyOf -> Not -> AllOf
     if (condition.type === "AllOf") {
@@ -286,6 +286,7 @@ export function NewCondition({ setCondition }: { setCondition: (condition: Advis
       {active: false, set: () => setCondition({type: "AnyOf", data: []}), label: <>Any of...</>, description: <>At least one sub-condition must be met. (OR between each condition.)</>},
       {active: false, set: () => setCondition({type: "Not", data: {data: {type: "None"}}}), label: <>Not...</>, description: <>The sub-condition must NOT be met. (Inverts the sub-condition.)</>},
       {active: false, set: () => setCondition({type: "GroupCondition", data: {type: "None"}}), label: <>In a group matching condition...</>, description: <>The condition applies to each group the user is in, and if any group meets the condition, the user matches.</>},
+      {active: false, set: () => setCondition({type: "Is", data: ""}), label: <>User ID is</>},
       {active: false, set: () => setCondition({type: "UsernameContains", data: ""}), label: <>Username contains</>},
       {active: false, set: () => setCondition({type: "StatusContains", data: ""}), label: <>Status contains</>},
       {active: false, set: () => setCondition({type: "PronounContains", data: ""}), label: <>Pronouns contain</>},
@@ -303,6 +304,7 @@ export function NewCondition({ setCondition }: { setCondition: (condition: Advis
 
 export const ConditionLabel = (condition: AdvisoryCondition) => {
   switch (condition.type) {
+    case "Is": return <>User ID is</>;
     case "UsernameContains": return <>Username contains</>;
     case "StatusContains": return <>Status contains</>;
     case "PronounContains": return <>Pronouns contain</>;
@@ -324,6 +326,7 @@ export const ConditionInputTip = (condition: AdvisoryCondition) => {
     case "AvatarMayBe": return <>Avatar ID (avtr_***)</>;
     case "IsGroupMember": return <>Group ID (grp_***)</>;
     case "InstanceOwner": return <>User or group ID (usually usr_*** or grp_***)</>;
+    case "Is": return <>User ID (usually usr_***)</>;
     default: return null;
   }
 }

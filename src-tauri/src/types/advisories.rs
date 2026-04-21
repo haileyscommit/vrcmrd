@@ -134,6 +134,10 @@ pub struct Advisory {
 #[ts(export)]
 pub enum AdvisoryCondition {
     // == User conditions ==
+    /// The user has the given ID (`usr_***`).
+    /// Useful to set advisories for specific users, i.e. to watchlist certain users,
+    /// or to exclude users from certain advisories.
+    Is(String),
     // These should be applied at join-time.
     /// The user is a member of the group with the given ID (`grp_***`).
     /// Useful to set advisories for known bad groups, or for moderators.

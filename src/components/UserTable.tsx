@@ -173,7 +173,10 @@ export default function UserTable() {
                       ]
                     }),
                     await menu.MenuItem.new({
-                      text: 'Copy user ID'
+                      text: 'Copy user ID',
+                      action: () => {
+                        navigator.clipboard.writeText(u.id);
+                      }
                     }),
                   ]});
                   cm.popup();

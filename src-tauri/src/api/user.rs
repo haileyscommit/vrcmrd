@@ -190,6 +190,7 @@ impl VrcMrdUser {
                 .borrow_mut()
                     .insert("username", self.username.clone());
             if advisory.condition.evaluate(&|condition| match condition {
+                AdvisoryCondition::Is(id) => self.id == id,
                 AdvisoryCondition::UsernameContains(string) => self
                     .username
                 .to_lowercase()
