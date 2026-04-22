@@ -3,7 +3,9 @@ use std::{ops::Deref, path::Path, time::Duration};
 use parking_lot::Mutex;
 use reqwest::cookie::CookieStore;
 use reqwest_drive::{CachePolicy, ThrottlePolicy, init_cache_with_throttle};
+use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Listener, Manager, Wry};
+use ts_rs::TS;
 use vrchatapi::{apis::configuration::Configuration, models::RegisterUserAccount200Response};
 
 #[macro_use]
@@ -25,6 +27,7 @@ pub struct VrchatApiState {
     pub mode: VrchatApiMode,
     pub cookies: Option<std::sync::Arc<reqwest::cookie::Jar>>,
     pub config: Option<Configuration>,
+    pub username: Option<String>,
     pub cache_file: Option<String>,
 }
 impl VrchatApiState {
@@ -33,6 +36,7 @@ impl VrchatApiState {
             mode: VrchatApiMode::NotReady,
             cookies: None,
             config: None,
+            username: None,
             cache_file: None,
         }
     }
@@ -223,7 +227,8 @@ pub async fn initialize_api(app: AppHandle) -> Result<(), ()> {
         Ok(user) => {
             match user {
                 RegisterUserAccount200Response::CurrentUser(user_info) => {
-                    println!("Logged in as {} ({})", user_info.display_name, user_info.id);
+                    let display_name = user_info.display_name.clone();
+                    println!("Logged in as {} ({})", display_name.clone(), user_info.id);
                     // TODO: save auth cookie in secure storage for later use
                     cookie_jar
                         .cookies(
@@ -264,8 +269,10 @@ pub async fn initialize_api(app: AppHandle) -> Result<(), ()> {
                         mode: VrchatApiMode::Ready,
                         cookies: Some(std::sync::Arc::clone(&cookie_jar)),
                         config: Some(config.clone()),
+                        username: Some(display_name.clone()),
                         cache_file: cache_path.to_str().map(|s| s.to_string()),
                     };
+                    let _ = app.emit("vrcmrd:logged_in", ());
                     Ok(())
                 }
                 RegisterUserAccount200Response::RequiresTwoFactorAuth(info) => {
@@ -281,6 +288,7 @@ pub async fn initialize_api(app: AppHandle) -> Result<(), ()> {
                         mode: VrchatApiMode::Preparing,
                         cookies: Some(std::sync::Arc::clone(&cookie_jar)),
                         config: Some(config.clone()),
+                        username: None,
                         cache_file: cache_path.to_str().map(|s| s.to_string()),
                     };
                     Ok(())
@@ -351,21 +359,23 @@ pub async fn submit_2fa_token(
     config_state: tauri::State<'_, VrchatApiStateMutex>,
 ) -> Result<(), String> {
     println!("Received 2FA token from UI.");
-    let (config, cookies, cache_file) = {
+    let (config, cookies, username, cache_file) = {
         let mut guard = config_state.deref().lock();
         match guard.clone() {
             VrchatApiState {
                 mode: VrchatApiMode::Preparing,
                 cookies: Some(cookies),
                 config: Some(cfg),
+                username: Some(username),
                 cache_file: Some(cache_file),
-            } => (cfg, cookies, cache_file),
+            } => (cfg, cookies, username, cache_file),
             VrchatApiState {
                 mode: VrchatApiMode::TwoFactorCode(_),
                 cookies: Some(cookies),
                 config: Some(cfg),
+                username: Some(username),
                 cache_file: Some(cache_file),
-            } => (cfg, cookies, cache_file),
+            } => (cfg, cookies, username, cache_file),
             other => {
                 *guard = other.clone();
                 eprintln!("API state not ready for 2FA token submission: {:?}", other);
@@ -379,6 +389,7 @@ pub async fn submit_2fa_token(
             mode: VrchatApiMode::TwoFactorCode(token),
             cookies: Some(cookies),
             config: Some(config.clone()),
+            username: Some(username),
             cache_file: Some(cache_file),
         };
     };
@@ -440,6 +451,7 @@ pub fn vrchat_api_plugin() -> tauri::plugin::TauriPlugin<Wry> {
                 mode: VrchatApiMode::NotReady,
                 config: None,
                 cookies: None,
+                username: None,
                 cache_file: None,
             }));
             // These two clones are needed to prevent borrowing issues.
@@ -455,6 +467,7 @@ pub fn vrchat_api_plugin() -> tauri::plugin::TauriPlugin<Wry> {
                         mode: VrchatApiMode::Preparing,
                         cookies: None,
                         config: None,
+                        username: None,
                         cache_file: None,
                     };
                     // These clones are also needed to prevent borrowing issues. Yay rust!
@@ -506,4 +519,35 @@ pub fn vrchat_api_plugin() -> tauri::plugin::TauriPlugin<Wry> {
             Ok(())
         })
         .build()
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export)]
+pub struct GetUsernameResponse {
+    username: Option<String>,
+    logging_in: bool
+}
+
+#[tauri::command]
+pub async fn get_username(
+    app: tauri::AppHandle<Wry>
+) -> GetUsernameResponse {
+    let state = {
+        // Use the regular API client (throttled/debounced and cached)
+        let config_state = app.state::<VrchatApiStateMutex>();
+        let config_state = config_state.lock();
+        config_state.clone()
+    };
+    if state.mode == VrchatApiMode::Ready || state.mode == VrchatApiMode::NotReady {
+        return GetUsernameResponse {
+            username: state.username,
+            logging_in: false
+        }
+    } else {
+        return GetUsernameResponse {
+            username: None,
+            logging_in: true
+        }
+    }
 }

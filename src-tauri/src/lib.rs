@@ -52,6 +52,7 @@ pub fn run() {
             settings::get_config,
             settings::secret::update_credentials,
             api::logout,
+            api::get_username,
             // Advisories CRUD
             advisories::generate_advisory_id,
             advisories::add_advisory,
@@ -90,7 +91,7 @@ pub fn run() {
                         println!("Not installed, skipping setting AUMID. Desktop notifications may not work properly if the app is not run from an installed location.");
                     }
                 }
-            } 
+            }
             // let salt_path = app
             //     .path()
             //     .app_local_data_dir()
@@ -154,7 +155,7 @@ pub fn run() {
             };
             app.listen_any("vrcmrd:cache_refresh", xso_refresh_handler.clone());
             app.listen_any("vrcmrd:settled", xso_refresh_handler.clone());
-            
+
             // Deadlock detection
             #[cfg(debug_assertions)]
             tauri::async_runtime::spawn(async {

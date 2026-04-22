@@ -1,12 +1,36 @@
 import { invoke } from "@tauri-apps/api/core";
-import { useState } from "preact/hooks";
+import { listen } from "@tauri-apps/api/event";
+import { GetUsernameResponse } from "@app/bindings/GetUsernameResponse";
+import { useEffect, useState } from "preact/hooks";
 
 export default function NetworkingSettingsPage({ loading, setLoading }: { loading: boolean; setLoading: (v: boolean) => void }) {
   const [username, setUsername] = useState("");
+  const [loggedInUsername, setLoggedInUsername] = useState("");
   const [password, setPassword] = useState("");
+
+  useEffect(() => {
+    invoke("get_username").then((response) => {
+      const resp = response as GetUsernameResponse;
+      if (resp.loggingIn) setLoading(true);
+      setLoggedInUsername(resp.username || "");
+    });
+    const unlisten = listen("vrcmrd:logged_in", () => {
+      setLoading(false);
+      invoke("get_username").then((response) => {
+        const resp = response as GetUsernameResponse;
+        if (resp.loggingIn) setLoading(true);
+        setLoggedInUsername(resp.username || "");
+      });
+    });
+    return () => {
+      unlisten.then((unlisten) => unlisten());
+    }
+  }, []);
+
   return (
     <div className={`space-y-4 ${loading ? "opacity-50 pointer-events-none cursor-wait" : ""}`}>
       <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">VRChat Credentials</h2>
+      <p>{loggedInUsername ? <>Logged in as {loggedInUsername}</> : <>Not logged in</>}</p>
       <p className="text-sm text-gray-600 dark:text-gray-300">We need these to access the VRChat API, which is used to get information about other users in the instance.</p>
       <div className="space-y-2">
         <label className="block text-xs text-gray-600 dark:text-gray-400">Username</label>
