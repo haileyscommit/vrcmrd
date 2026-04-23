@@ -8,20 +8,20 @@ use crate::{api::{VRCHAT_API_USERAGENT, VrchatApiStateMutex}, memory::users::Use
 
 // TODO: use a setting to get the list, and use this hardcoded list as the default instead
 const AVATAR_API_BASE_URLS: [&str; 4] = [
-    "https://api.avtrdb.com/v2/avatar/search/vrcx", // seems to be blocked by cloudflare
+    "https://api.avtrdb.com/v2/avatar/search/vrcx",
     //"https://api.avatarrecovery.com/Avatar/vrcx",
     "https://vrcx.vrcdb.com/avatars/Avatar/VRCX",
     "https://vrcx.avtr.zip/",
     "https://avatarwbvrcxsearch.worldbalancer.com/vrcx_search",
 ];
 const AVATAR_API_BASE_URLS_SUPPORTING_FILEID: [&str; 1] = [
-    "https://api.avtrdb.com/v2/avatar/search/vrcx", // seems to be blocked by cloudflare
+    "https://api.avtrdb.com/v2/avatar/search/vrcx",
     //"https://api.avatarrecovery.com/Avatar/vrcx",
     //"https://vrcx.vrcdb.com/avatars/Avatar/VRCX",
 ];
 const AVATAR_API_BASE_URLS_SUPPORTING_AUTHORID: [&str; 2] = [
+    "https://api.avtrdb.com/v2/avatar/search/vrcx",
     "https://avatarwbvrcxsearch.worldbalancer.com/vrcx_search",
-    "https://api.avtrdb.com/v2/avatar/search/vrcx", // seems to be blocked by cloudflare
     // "https://api.avatarrecovery.com/Avatar/vrcx",
     //"https://vrcx.vrcdb.com/avatars/Avatar/VRCX",
 ];
