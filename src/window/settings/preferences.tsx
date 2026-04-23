@@ -73,11 +73,12 @@ export default function PreferencesPage({ loading }: { loading: boolean }) {
       ]} />
     </div>
     <CheckboxPreference label="Show platform in user list" configKey="show_platform" />
+    <CheckboxPreference label="Look up group name for instances" configKey="instance_lookup_group_name" defaultValue={true} />
   </div>
 }
 
-export function CheckboxPreference({ label, configKey } : { label: preact.VNode | string, configKey: string }) {
-  const [enabled, setEnabled] = useState(false);
+export function CheckboxPreference({ label, configKey, defaultValue } : { label: preact.VNode | string, configKey: string, defaultValue?: boolean }) {
+  const [enabled, setEnabled] = useState(defaultValue ?? false);
   function set(value: boolean) {
     invoke("update_config", { key: configKey, value: value ? "1" : "0" }).catch((e) => {
       console.error(`Failed to set config ${configKey} to ${value}:`, e);
@@ -88,6 +89,8 @@ export function CheckboxPreference({ label, configKey } : { label: preact.VNode 
     invoke("get_config", { key: configKey }).then((value) => {
       if (typeof value === "string") {
         setEnabled(value === "1");
+      } else if (defaultValue !== undefined) {
+        setEnabled(defaultValue);
       }
     });
     const updated = listen("vrcmrd:config_updated", (event) => {

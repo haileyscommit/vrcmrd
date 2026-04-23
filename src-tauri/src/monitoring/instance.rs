@@ -1,8 +1,11 @@
 use parking_lot::Mutex;
 
+use tauri::http::response;
 use tauri::{AppHandle, Emitter, Manager};
+use vrchatapi::models::InstanceType;
 
 use crate::api::VrchatApiStateMutex;
+use crate::settings;
 use crate::{
     memory::{
         instance::{InstanceState, InstanceStateMutex},
@@ -61,28 +64,72 @@ pub fn handle_joined_instance(app: AppHandle, line: &VrcLogEntry) -> Result<bool
 /// Start thread to get instance details from API
 pub fn query_instance_info(app: AppHandle, instance_id: &VrcMrdInstanceId) {
     if app.try_state::<VrchatApiStateMutex>().is_some() {
-        println!("Fetching instance info for ID: {}", instance_id.to_string());
+        let full_id = instance_id.to_string();
+        let (world_id, instance_id_) = full_id.split_once(':').expect("invalid instance ID");
+        println!("Fetching instance info for ID: {}:{}", world_id, instance_id_);
         //let app_handle = app.clone();
         //let config = config.clone();
         //let instance_id = instance_id.to_string();
         let instance_id = instance_id.clone();
         tauri::async_runtime::spawn(async move {
             let handle = app.clone();
+            // let iid = {
+            //     instance_id.to_string().replace(&(instance_id.world.to_owned() + ":"), "").clone()
+            // };
+            let full_id = instance_id.to_string();
+            let (world_id, instance_id) = full_id.split_once(':').expect("invalid instance ID");
             let response = try_request!(handle, |config| {
-                vrchatapi::apis::instances_api::get_instance(config, &instance_id.world, &instance_id.id)
+                crate::api::instance::get_instance(config, &world_id, &instance_id)
             }, { wait_for_api_ready: true }).await;
             // match response...
             match response {
                 Ok(Some(instance_info)) => {
                     let handle = app.clone();
-                    //println!("Fetched instance info: {:?}", instance_info);
+                    println!("Fetched instance info: {:?}", instance_info);
                     println!("Received instance info for {}", &instance_info.id);
                     let name = {
-                        if let Some(display_name) = instance_info.clone().display_name.flatten() {
+                        let display_name = {
+                            let display_name = instance_info.clone().display_name.flatten();
+                            if let Some(display_name) = display_name {
+                                if display_name.is_empty() {
+                                    None
+                                } else {
+                                    Some(display_name)
+                                }
+                            } else {
+                                None
+                            }
+                        };
+                        let world_name = instance_info.world.name.clone();
+                        let group_name = {
+                            let setting = settings::get_config(app, "instance_lookup_group_name".to_string()).await.ok().flatten();
+                            if setting != Some("0".to_string()) {
+                                if instance_info.clone().r#type == InstanceType::Group {
+                                    let group_id = instance_info.clone().owner_id.flatten().unwrap_or_default();
+                                    let response = try_request!(handle, |config| {
+                                        vrchatapi::apis::groups_api::get_group(config, &group_id, None)
+                                    }, { wait_for_api_ready: true }).await;
+                                    match response {
+                                        Ok(Some(group_info)) => Some(group_info.name.clone()),
+                                        Ok(None) => None,
+                                        Err(e) => {
+                                            eprintln!("Failed to fetch group info for group ID {}: {:?}", &group_id, e);
+                                            None
+                                        }
+                                    }
+                                } else {
+                                    None
+                                }
+                            } else {
+                                None
+                            }
+                        };
+                        if let Some(display_name) = display_name {
                             display_name
+                        } else if let Some(group_name) = group_name.flatten() {
+                            group_name
                         } else {
-                            // TODO: get group name
-                            instance_info.world.name.clone()
+                            world_name
                         }
                     };
                     // Set window title to reflect instance name
@@ -104,7 +151,6 @@ pub fn query_instance_info(app: AppHandle, instance_id: &VrcMrdInstanceId) {
                         for member in instance_info.clone().users.unwrap_or_default() {
                             for user in users_state.inner.iter_mut() {
                                 if user.id == member.clone().id {
-                                    // TODO: use the "system_probable_troll" field to add an advisory
                                     println!(
                                         "Updating user {} in user list based on instance info",
                                         &member.id
