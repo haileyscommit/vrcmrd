@@ -315,6 +315,17 @@ impl VrcMrdUser {
                     }
                     matches
                 },
+                AdvisoryCondition::AvatarCreatorIs(ownerId) => {
+                    let avatar_creator = self.avatar_creator.clone().unwrap_or_default();
+                    if avatar_creator.is_empty() {
+                        return advisories.iter().any(|a| a.id == advisory.id);
+                    }
+                    let matches = avatar_creator.as_str() == ownerId.as_str();
+                    // if matches {
+                    //     templates.borrow_mut().insert("avatar_creator", avatar_creator.clone());
+                    // }
+                    matches
+                },
                 AdvisoryCondition::InGroupNameContains(needle) => {
                     if self.groups.is_empty() && advisories.iter().any(|a| a.id == advisory.id) {
                         // if the advisory is already active and groups are not available, assume the user is

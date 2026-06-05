@@ -15,6 +15,7 @@ pub struct VrcMrdUser {
     pub username: String,
     pub avatar_name: String,
     pub avatar_id: Option<String>,
+    pub avatar_creator: Option<String>,
     pub avatar_images: Vec<String>,
     pub perf_rank: Option<PerfRank>,
     pub pronouns: Option<String>,

@@ -185,6 +185,9 @@ pub enum AdvisoryCondition {
     // TODO: PerfRankAtMost(AvatarPerformance),
     /// The user's current avatar's name contains the given substring (case-insensitive).
     AvatarNameContains(String),
+    /// The user's current avatar is created by the given user ID (`usr_***`).
+    /// Useful to set advisories for creators of several bad avatars.
+    AvatarCreatorIs(String),
 
     // == Instance conditions ==
     // ** NOTE: these only generate notices and don't themselves apply to users! **

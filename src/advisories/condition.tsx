@@ -18,7 +18,7 @@ export default function ConditionEditor({ condition, depth, setCondition, addSib
   addSibling?: (condition: AdvisoryCondition) => void,
   removeCondition?: (() => void)
 }) {
-  const singleStringConditions: AdvisoryCondition["type"][] = ["Is", "UsernameContains", "StatusContains", "PronounContains", "AvatarMayBe", "AvatarNameContains", "IsGroupMember", "InstanceOwner"];
+  const singleStringConditions: AdvisoryCondition["type"][] = ["Is", "UsernameContains", "StatusContains", "PronounContains", "AvatarMayBe", "AvatarNameContains", "AvatarCreatorIs", "IsGroupMember", "InstanceOwner"];
   function cycleConditionType(e: Event) {
     // AllOf -> AnyOf -> Not -> AllOf
     if (condition.type === "AllOf") {
@@ -293,6 +293,7 @@ export function NewCondition({ setCondition }: { setCondition: (condition: Advis
       {active: false, set: () => setCondition({type: "AccountAgeAtMostDays", data: 0}), label: <>Account age</>},
       {active: false, set: () => setCondition({type: "AvatarMayBe", data: ""}), label: <>Avatar</>, description: <>One of a list of possibly-equipped avatars</>},
       {active: false, set: () => setCondition({type: "AvatarNameContains", data: ""}), label: <>Avatar name contains</>, description: <>Useful to find types of avatar that are commonly used by trolls</>},
+      {active: false, set: () => setCondition({type: "AvatarCreatorIs", data: ""}), label: <>Avatar creator ID is</>, description: <>The ID of the user who created the avatar</>},
       {active: false, set: () => setCondition({type: "IsGroupMember", data: ""}), label: <>Is member of group</>},
       {active: false, set: () => setCondition({type: "AgeNotVerified"}), label: <>Not 18+ age-verified</>, description: <>Users who have not ID-verified with VRChat</>},
       {active: false, set: () => setCondition({type: "PlatformIs", data: ""}), label: <>Platform</>},
@@ -310,6 +311,7 @@ export const ConditionLabel = (condition: AdvisoryCondition) => {
     case "PronounContains": return <>Pronouns contain</>;
     case "AvatarMayBe": return <>Wearing avatar</>;
     case "AvatarNameContains": return <>Avatar name contains</>;
+    case "AvatarCreatorIs": return <>Avatar creator ID is</>;
     case "IsGroupMember": return <>Is member of group</>;
     case "InstanceOwner": return <>In instance owned by</>;
     case "InstanceGroupRestricted": return <>In Group-only or Group+ instance</>;
@@ -327,6 +329,7 @@ export const ConditionInputTip = (condition: AdvisoryCondition) => {
     case "IsGroupMember": return <>Group ID (grp_***)</>;
     case "InstanceOwner": return <>User or group ID (usually usr_*** or grp_***)</>;
     case "Is": return <>User ID (usually usr_***)</>;
+    case "AvatarCreatorIs": return <>User ID (usually usr_***)</>;
     default: return null;
   }
 }

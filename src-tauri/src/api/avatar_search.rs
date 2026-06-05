@@ -215,6 +215,18 @@ pub fn update_avatar(user: VrcMrdUser, app: AppHandle) {
                     eprintln!("No avatar found for file ID '{}' when updating avatar for user '{}'", file_id, user.username);
                     // Get the owner of the file and try searching by author ID
                     if let Some(owner_id) = get_owner_id_from_file(&file_id, app_clone.clone()).await {
+                        // Save avatar creator ID (may be incorrect)
+                        {
+                            let users_state = app_clone.state::<Mutex<Users>>();
+                            let mut users_state = users_state.lock();
+                            if let Some(user) = users_state
+                                .inner
+                                .iter_mut()
+                                .find(|u| u.username == user.clone().username)
+                            {
+                                user.avatar_creator = Some(owner_id.clone());
+                            }
+                        }
                         match crate::api::avatar_search::search_avatar_by_author(&owner_id, Some(&user.avatar_name), client.clone()).await {
                             Ok(results) => {
                                 if results.is_empty() {
@@ -225,8 +237,20 @@ pub fn update_avatar(user: VrcMrdUser, app: AppHandle) {
                                     for avatar_result in results {
                                         if avatar_result.name.is_some() && avatar_result.name.as_ref().unwrap().clone() == user.avatar_name {
                                             let avatar_name = avatar_result.name.clone().unwrap();
+                                            let author = avatar_result.author_id.clone();
                                             println!("Found matching avatar '{}' for user '{}' by author ID search", avatar_name, user.username);
                                             let (returned_avatar_id, has_perf_info) = update_avatar_from_search(&user, avatar_result, app.clone());
+                                            if let Some(author) = author {
+                                                let users_state = app_clone.state::<Mutex<Users>>();
+                                                let mut users_state = users_state.lock();
+                                                if let Some(user) = users_state
+                                                    .inner
+                                                    .iter_mut()
+                                                    .find(|u| u.username == user.clone().username)
+                                                {
+                                                    user.avatar_creator = Some(author);
+                                                }
+                                            }
                                             if has_perf_info {
                                                 found_performance_info = true;
                                             }
@@ -319,6 +343,19 @@ pub fn update_avatar(user: VrcMrdUser, app: AppHandle) {
                                 if avatar_result.name.is_some() && avatar_result.name.as_ref().unwrap() == file_meta.avatar_name.as_ref().unwrap() {
                                     let avatar_name = avatar_result.name.clone().unwrap();
                                     println!("Found matching avatar '{}' for user '{}' by author ID search (using file metadata)", avatar_name, user.clone().username);
+                                    // Save avatar creator ID
+                                    let author = avatar_result.author_id.clone();
+                                    if let Some(author) = author {
+                                        let users_state = app_clone.state::<Mutex<Users>>();
+                                        let mut users_state = users_state.lock();
+                                        if let Some(user) = users_state
+                                            .inner
+                                            .iter_mut()
+                                            .find(|u| u.username == user.clone().username)
+                                        {
+                                            user.avatar_creator = Some(author);
+                                        }
+                                    }
                                     // Update the user in the user list with the new avatar data
                                     let (returned_avatar_id, has_perf_info) = update_avatar_from_search(&user, avatar_result, app.clone());
                                     if has_perf_info {
@@ -429,6 +466,9 @@ fn update_avatar_from_search(user: &VrcMrdUser, result: VrcxAvatarSearchResult, 
         // if let Some(name) = result.name.clone() {
         //     user.avatar_name = name;
         // }
+        if let Some(author) = result.author_id.clone() {
+            user.avatar_creator = Some(author);
+        }
         if let Some(performance) = result.performance.clone() {
             user.perf_rank = performance.get_worst_rank();
             found_performance_info = true;
